@@ -18,15 +18,20 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === 'SEU_URL_SUPABASE') 
         "<p>Erro de configuração. Conexão com o banco de dados falhou.</p>";
 }
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ---- CORREÇÃO AQUI ----
+// 'supabase' (minúsculo) é o objeto global do CDN.
+// 'supabaseClient' (nome novo) é o nosso cliente de conexão.
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 2. Elemento HTML onde os cards serão inseridos
 const dashboardContainer = document.getElementById('dashboard-container');
 
 // 3. Função para carregar e exibir os colaboradores
 async function carregarColaboradores() {
-    // Busca todos os dados da tabela 'QLP'
-    const { data, error } = await supabase
+    
+    // ---- CORREÇÃO AQUI ----
+    // Usamos o 'supabaseClient' que acabamos de criar.
+    const { data, error } = await supabaseClient
         .from('QLP')
         .select('*');
 
@@ -54,44 +59,42 @@ async function carregarColaboradores() {
 // 5. Função para criar o HTML de um único card
 function criarCardColaborador(colaborador) {
     
-    // ---- Mapeamento dos dados ----
-    // Usamos '|| ""' para garantir que, se o dado for nulo, ele apareça como um espaço vazio.
-    const status = colaborador.SITUACAO || 'Indefinido';
+    // ---- Mapeamento dos dados (COM OS NOMES CORRIGIDOS DO PRINT) ----
+    const status = colaborador.SITUAÇÃO || 'Indefinido'; // COM TIL
     const nome = colaborador.NOME || '';
     const cpf = colaborador.CPF || '';
-    const funcao = colaborador.CARGO_ATUAL || ''; // Mapeado de CARGO ATUAL
-    const area = colaborador.ATIVIDADE || ''; // Mapeado de ATIVIDADE
+    const funcao = colaborador.CARGO_ATUAL || '';
+    const area = colaborador.ATIVIDADE || '';
     const tempoEmpresa = colaborador.TEMPO_DE_EMPRESA || '';
-    const escolaridade = colaborador.ESCOLARIDADE || '';
-    const salario = colaborador.SALARIO || '';
-    const pcd = colaborador.PCD || 'NÃO'; // Assume 'NÃO' se nulo
-    const telefone = colaborador.CONTATO || ''; // Mapeado de CONTATO
-    const telEmergencia = colaborador.CONT_FAMILIAR || ''; // Mapeado de CONT FAMILIAR
+    const escolaridade = colaborador.Escolaridade || ''; // COM 'E' MAIÚSCULO
+    const salario = colaborador.SALÁRIO || ''; // COM ACENTO
+    const pcd = colaborador.PCD || 'NÃO'; 
+    const telefone = colaborador.CONTATO || ''; 
+    const telEmergencia = colaborador.CONT_FAMILIAR || '';
     const turno = colaborador.TURNO || '';
-    const lider = colaborador.LIDER || ''; // Mapeado de LIDER
+    const lider = colaborador.LIDER || '';
     const dataPromocao = colaborador.DATA_PROMOCAO || '';
 
     // ---- Lógica para Estilos CSS ----
     
-    // Define a classe CSS para a borda e o badge de status
     let statusClass = '';
+    // Adicionamos os status que vimos no seu print (Afastamento, Despedida)
     if (status.toUpperCase() === 'ATIVO') {
         statusClass = 'status-ativo';
-    } else if (status.toUpperCase() === 'AFASTADO') {
+    } else if (status.toUpperCase() === 'AFASTADO' || status.toUpperCase() === 'AFASTAMENTO') {
         statusClass = 'status-afastado';
-    } else if (status.toUpperCase() === 'DESLIGADOS') {
+    } else if (status.toUpperCase() === 'DESLIGADOS' || status.toUpperCase() === 'DESPEDIDA') {
         statusClass = 'status-desligados';
     }
 
-    // Define a classe CSS para o badge PCD
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
 
     // ---- Retorna o HTML do Card ----
-    // Usamos template literals (crases ``) para montar o HTML
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
-                <img src="avatar-placeholder.png" alt="Foto"> <div class="header-info">
+                <img src="avatar-placeholder.png" alt="Foto">
+                <div class="header-info">
                     <h3>${nome}</h3>
                     <span class="status-badge ${statusClass}">${status}</span>
                 </div>
