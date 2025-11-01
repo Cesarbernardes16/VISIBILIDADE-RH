@@ -18,6 +18,9 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === 'SEU_URL_SUPABASE') 
         "<p>Erro de configuração. Conexão com o banco de dados falhou.</p>";
 }
 
+// ---- CORREÇÃO AQUI ----
+// 'supabase' (minúsculo) é o objeto global do CDN.
+// 'supabaseClient' (nome novo) é o nosso cliente de conexão.
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 2. Elemento HTML onde os cards serão inseridos
@@ -26,6 +29,8 @@ const dashboardContainer = document.getElementById('dashboard-container');
 // 3. Função para carregar e exibir os colaboradores
 async function carregarColaboradores() {
     
+    // ---- CORREÇÃO AQUI ----
+    // Usamos o 'supabaseClient' que acabamos de criar.
     const { data, error } = await supabaseClient
         .from('QLP')
         .select('*');
@@ -41,23 +46,20 @@ async function carregarColaboradores() {
         return;
     }
 
-    // --- OTIMIZAÇÃO DE PERFORMANCE ---
-    // 1. Criamos uma variável para guardar todo o HTML
-    let htmlParaInserir = '';
+    // Limpa o container antes de adicionar novos cards
+    dashboardContainer.innerHTML = '';
 
-    // 2. Construímos a string gigante no loop (muito rápido)
+    // 4. Cria um card para cada colaborador
     data.forEach(colaborador => {
-        htmlParaInserir += criarCardColaborador(colaborador);
+        const cardHTML = criarCardColaborador(colaborador);
+        dashboardContainer.innerHTML += cardHTML;
     });
-
-    // 3. Inserimos tudo no DOM UMA ÚNICA VEZ (super rápido)
-    dashboardContainer.innerHTML = htmlParaInserir;
 }
 
 // 5. Função para criar o HTML de um único card
 function criarCardColaborador(colaborador) {
     
-    // ---- Mapeamento dos dados ----
+    // ---- Mapeamento dos dados (COM OS NOMES CORRIGIDOS DO PRINT) ----
     const status = colaborador.SITUAÇÃO || 'Indefinido'; // COM TIL
     const nome = colaborador.NOME || '';
     const cpf = colaborador.CPF || '';
@@ -65,7 +67,7 @@ function criarCardColaborador(colaborador) {
     const area = colaborador.ATIVIDADE || '';
     const tempoEmpresa = colaborador.TEMPO_DE_EMPRESA || '';
     const escolaridade = colaborador.Escolaridade || ''; // COM 'E' MAIÚSCULO
-    const salario = colaborador.SALÁRIO || ''; // COM ACENTO
+    const salario = colaborador.SALARIO || ''; // COM ACENTO
     const pcd = colaborador.PCD || 'NÃO'; 
     const telefone = colaborador.CONTATO || ''; 
     const telEmergencia = colaborador.CONT_FAMILIAR || '';
@@ -76,29 +78,29 @@ function criarCardColaborador(colaborador) {
     // ---- Lógica para Estilos CSS ----
     
     let statusClass = '';
-    const statusUpper = status.toUpperCase(); // Para evitar chamar toUpperCase() várias vezes
-
-    if (statusUpper === 'ATIVO') {
+    // Adicionamos os status que vimos no seu print (Afastamento, Despedida)
+    if (status.toUpperCase() === 'ATIVO') {
         statusClass = 'status-ativo';
-    } else if (statusUpper === 'AFASTADO' || statusUpper === 'AFASTAMENTO') {
+    } else if (status.toUpperCase() === 'AFASTADO' || status.toUpperCase() === 'AFASTAMENTO') {
         statusClass = 'status-afastado';
-    } else if (statusUpper === 'DESLIGADOS' || statusUpper === 'DESPEDIDA') {
+    } else if (status.toUpperCase() === 'DESLIGADOS' || status.toUpperCase() === 'DESPEDIDA') {
         statusClass = 'status-desligados';
     }
 
-    const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao'; // pcd-nao não terá estilo, como pedido
+    const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
 
     // ---- Retorna o HTML do Card ----
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
-                <img src="avatar-placeholder.png" alt="Foto do Colaborador">
+                <img src="avatar-placeholder.png" alt="Foto">
                 <div class="header-info">
                     <h3>${nome}</h3>
                     <span class="status-badge ${statusClass}">${status}</span>
                 </div>
             </div>
             <div class="card-body">
+                <p><strong>NOME:</strong> <span>${nome}</span></p>
                 <p><strong>CPF:</strong> <span>${cpf}</span></p>
                 <p><strong>FUNÇÃO ATUAL:</strong> <span>${funcao}</span></p>
                 <p><strong>AREA:</strong> <span>${area}</span></p>
