@@ -56,6 +56,12 @@ header {
     border-radius: 50%;
     margin-right: 15px;
     border: 2px solid #ddd;
+    background-color: #eee; /* Fundo cinza para o placeholder */
+}
+
+.card-header .header-info {
+    display: flex;
+    flex-direction: column; /* Coloca o nome em cima do status */
 }
 
 .card-header h3 {
@@ -74,6 +80,8 @@ header {
     margin-top: 5px;
     display: inline-block;
     text-transform: uppercase;
+    width: fit-content; /* Ajusta a largura ao texto */
+    background-color: #aaa; /* Cor padrão para status indefinido */
 }
 
 .status-badge.status-ativo {
@@ -91,35 +99,42 @@ header {
     padding: 15px;
 }
 
+/* --- CORREÇÃO DE FORMATAÇÃO (PEDIDO ATUAL) --- */
 .card-body p {
     margin: 8px 0;
     font-size: 0.9em;
     color: #555;
     display: flex;
-    justify-content: space-between; /* Alinha o rótulo à esquerda e o valor à direita */
+    /* Removemos o 'justify-content: space-between;' para o texto ficar junto */
+    gap: 10px; /* Espaço entre o Rótulo e o Valor */
+    border-bottom: 1px solid #f0f0f0; /* Linha separadora leve */
+    padding-bottom: 5px;
+    align-items: center; /* Alinha o rótulo e o valor verticalmente */
 }
 
 .card-body p strong {
     color: #000;
-    margin-right: 5px;
+    /* margin-right: 5px; (Substituído pelo 'gap' no 'p' acima) */
+    flex-shrink: 0; /* Impede que o rótulo (ex: "NOME:") encolha */
 }
 
 .card-body p span {
-    text-align: right;
+    /* text-align: right; <-- REMOVIDO (para o texto ficar junto) */
     color: #333;
+    word-break: break-word; /* Quebra palavras longas se necessário */
 }
+/* ------------------------------------------- */
+
 
 /* Destaque para o PCD: SIM (como na imagem) */
 .pcd-badge {
     padding: 3px 8px;
     border-radius: 4px;
     font-weight: bold;
+    background-color: #f8f9fa; /* Fundo neutro para "NAO" */
+    color: #555;
 }
 .pcd-badge.pcd-sim {
     background-color: #d4edda; /* Verde claro */
     color: #155724; /* Verde escuro */
-}
-.pcd-badge.pcd-nao {
-    background-color: #f8d7da; /* Vermelho claro */
-    color: #721c24; /* Vermelho escuro */
 }

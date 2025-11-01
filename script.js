@@ -18,9 +18,6 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === 'SEU_URL_SUPABASE') 
         "<p>Erro de configuração. Conexão com o banco de dados falhou.</p>";
 }
 
-// ---- CORREÇÃO AQUI ----
-// 'supabase' (minúsculo) é o objeto global do CDN.
-// 'supabaseClient' (nome novo) é o nosso cliente de conexão.
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 2. Elemento HTML onde os cards serão inseridos
@@ -29,8 +26,6 @@ const dashboardContainer = document.getElementById('dashboard-container');
 // 3. Função para carregar e exibir os colaboradores
 async function carregarColaboradores() {
     
-    // ---- CORREÇÃO AQUI ----
-    // Usamos o 'supabaseClient' que acabamos de criar.
     const { data, error } = await supabaseClient
         .from('QLP')
         .select('*');
@@ -46,20 +41,23 @@ async function carregarColaboradores() {
         return;
     }
 
-    // Limpa o container antes de adicionar novos cards
-    dashboardContainer.innerHTML = '';
+    // --- OTIMIZAÇÃO DE PERFORMANCE ---
+    // 1. Criamos uma variável para guardar todo o HTML
+    let htmlParaInserir = '';
 
-    // 4. Cria um card para cada colaborador
+    // 2. Construímos a string gigante no loop (muito rápido)
     data.forEach(colaborador => {
-        const cardHTML = criarCardColaborador(colaborador);
-        dashboardContainer.innerHTML += cardHTML;
+        htmlParaInserir += criarCardColaborador(colaborador);
     });
+
+    // 3. Inserimos tudo no DOM UMA ÚNICA VEZ (super rápido)
+    dashboardContainer.innerHTML = htmlParaInserir;
 }
 
 // 5. Função para criar o HTML de um único card
 function criarCardColaborador(colaborador) {
     
-    // ---- Mapeamento dos dados (COM OS NOMES CORRIGIDOS DO PRINT) ----
+    // ---- Mapeamento dos dados ----
     const status = colaborador.SITUAÇÃO || 'Indefinido'; // COM TIL
     const nome = colaborador.NOME || '';
     const cpf = colaborador.CPF || '';
@@ -78,29 +76,29 @@ function criarCardColaborador(colaborador) {
     // ---- Lógica para Estilos CSS ----
     
     let statusClass = '';
-    // Adicionamos os status que vimos no seu print (Afastamento, Despedida)
-    if (status.toUpperCase() === 'ATIVO') {
+    const statusUpper = status.toUpperCase(); // Para evitar chamar toUpperCase() várias vezes
+
+    if (statusUpper === 'ATIVO') {
         statusClass = 'status-ativo';
-    } else if (status.toUpperCase() === 'AFASTADO' || status.toUpperCase() === 'AFASTAMENTO') {
+    } else if (statusUpper === 'AFASTADO' || statusUpper === 'AFASTAMENTO') {
         statusClass = 'status-afastado';
-    } else if (status.toUpperCase() === 'DESLIGADOS' || status.toUpperCase() === 'DESPEDIDA') {
+    } else if (statusUpper === 'DESLIGADOS' || statusUpper === 'DESPEDIDA') {
         statusClass = 'status-desligados';
     }
 
-    const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
+    const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao'; // pcd-nao não terá estilo, como pedido
 
     // ---- Retorna o HTML do Card ----
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
-                <img src="avatar-placeholder.png" alt="Foto">
+                <img src="avatar-placeholder.png" alt="Foto do Colaborador">
                 <div class="header-info">
                     <h3>${nome}</h3>
                     <span class="status-badge ${statusClass}">${status}</span>
                 </div>
             </div>
             <div class="card-body">
-                <p><strong>NOME:</strong> <span>${nome}</span></p>
                 <p><strong>CPF:</strong> <span>${cpf}</span></p>
                 <p><strong>FUNÇÃO ATUAL:</strong> <span>${funcao}</span></p>
                 <p><strong>AREA:</strong> <span>${area}</span></p>
