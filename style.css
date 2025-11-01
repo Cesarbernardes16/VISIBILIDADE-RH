@@ -1,0 +1,125 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+/* Container principal dos cards */
+#dashboard-container {
+    display: flex;
+    flex-wrap: wrap; /* Permite que os cards quebrem a linha */
+    justify-content: center; /* Centraliza os cards */
+    gap: 20px; /* Espaço entre os cards */
+}
+
+/* O card do colaborador */
+.employee-card {
+    width: 380px; /* Largura fixa para cada card */
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden; /* Garante que a borda colorida do status funcione */
+    border-top: 5px solid #ccc; /* Borda de status padrão */
+}
+
+/* Cores da borda baseadas no status */
+.employee-card.status-ativo {
+    border-top-color: #28a745; /* Verde */
+}
+.employee-card.status-afastado {
+    border-top-color: #ffc107; /* Amarelo */
+}
+.employee-card.status-desligados {
+    border-top-color: #dc3545; /* Vermelho */
+}
+
+/* Cabeçalho do card (Foto, Nome, Status) */
+.card-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background-color: #fafafa;
+    border-bottom: 1px solid #eee;
+}
+
+.card-header img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-right: 15px;
+    border: 2px solid #ddd;
+}
+
+.card-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2em;
+}
+
+/* Badge de Status (que aparece ao lado do nome) */
+.status-badge {
+    font-size: 0.8em;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+    color: #fff;
+    margin-top: 5px;
+    display: inline-block;
+    text-transform: uppercase;
+}
+
+.status-badge.status-ativo {
+    background-color: #28a745;
+}
+.status-badge.status-afastado {
+    background-color: #ffc107;
+}
+.status-badge.status-desligados {
+    background-color: #dc3545;
+}
+
+/* Corpo do card (Lista de informações) */
+.card-body {
+    padding: 15px;
+}
+
+.card-body p {
+    margin: 8px 0;
+    font-size: 0.9em;
+    color: #555;
+    display: flex;
+    justify-content: space-between; /* Alinha o rótulo à esquerda e o valor à direita */
+}
+
+.card-body p strong {
+    color: #000;
+    margin-right: 5px;
+}
+
+.card-body p span {
+    text-align: right;
+    color: #333;
+}
+
+/* Destaque para o PCD: SIM (como na imagem) */
+.pcd-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+.pcd-badge.pcd-sim {
+    background-color: #d4edda; /* Verde claro */
+    color: #155724; /* Verde escuro */
+}
+.pcd-badge.pcd-nao {
+    background-color: #f8d7da; /* Vermelho claro */
+    color: #721c24; /* Vermelho escuro */
+}
