@@ -1,5 +1,4 @@
-// 1. Configuração do Cliente Supabase (PARA OS DADOS)
-// Isso AINDA é necessário para carregar os colaboradores!
+// 1. Configuração do Cliente Supabase
 if (typeof SUPABASE_CONFIG === 'undefined') {
     console.error("Erro: Arquivo 'config.js' não foi carregado.");
 }
@@ -7,30 +6,22 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
-// ======== NOVO: Auth Guard (Proteção da Página com sessionStorage) ========
-if (sessionStorage.getItem('usuarioLogado') !== 'true') {
-    // Se não houver sessão, chuta o usuário para o login
-    window.location.href = 'login.html';
-} else {
-    // Se houver sessão, o usuário está logado.
-    // Dispara o setup do dashboard
-    document.addEventListener('DOMContentLoaded', setupDashboard);
-}
-// =======================================================================
-
-
-// 2. Elementos HTML (Globais)
+// 2. Elementos HTML (Globais - só declaração)
 let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterCargo, filterLider, loadMoreButton;
+let metaForm, metaAreaSelect, metaValorInput, metaSubmitButton, metaSuccessMessage, reportTableBody;
 
 // Constantes de Paginação
 const ITENS_POR_PAGINA = 30;
 let currentPage = 0;
+const NOME_TABELA_QLP = 'QLP'; // Verifique se 'QLP' é o nome exato
+const NOME_TABELA_METAS = 'metas_qlp';
 
 
-// 3. Função Principal de Setup
+// 3. Função Principal de Setup (COM DEBUG)
 function setupDashboard() {
-    // Pega os elementos do DOM
+    console.log("DEBUG: 1. setupDashboard() EXECUTADO!"); // <-- DEBUG 1
+
+    // --- Elementos da "Visão Geral" ---
     dashboardContainer = document.getElementById('dashboard-container');
     loadingIndicator = document.getElementById('loading-indicator');
     searchBar = document.getElementById('search-bar');
@@ -40,23 +31,53 @@ function setupDashboard() {
     filterLider = document.getElementById('filter-lider');
     loadMoreButton = document.getElementById('load-more-button');
     
-    // --- Event Listeners dos Filtros ---
-    searchBar.addEventListener('input', carregarColaboradores);
-    filterStatus.addEventListener('change', carregarColaboradores);
-    filterArea.addEventListener('change', carregarColaboradores);
-    filterCargo.addEventListener('change', carregarColaboradores);
-    filterLider.addEventListener('change', carregarColaboradores);
-    loadMoreButton.addEventListener('click', carregarMais);
+    // --- Elementos do "Painel de Gestão" ---
+    metaForm = document.getElementById('meta-form');
+    metaAreaSelect = document.getElementById('meta-area');
+    metaValorInput = document.getElementById('meta-valor');
+    metaSubmitButton = document.getElementById('meta-submit-button');
+    metaSuccessMessage = document.getElementById('meta-success-message');
+    reportTableBody = document.getElementById('report-table-body');
     
-    // --- Event Listeners da Nova Navegação ---
+    console.log("DEBUG: 2. Elementos do DOM capturados."); // <-- DEBUG 2
+
+    // --- Event Listeners dos Filtros (Visão Geral) - COM CHECAGEM ---
+    if (searchBar) {
+        searchBar.addEventListener('input', carregarColaboradores);
+    }
+    if (filterStatus) {
+        filterStatus.addEventListener('change', carregarColaboradores);
+    }
+    if (filterArea) {
+        filterArea.addEventListener('change', carregarColaboradores);
+    }
+    if (filterCargo) {
+        filterCargo.addEventListener('change', carregarColaboradores);
+    }
+    if (filterLider) {
+        filterLider.addEventListener('change', carregarColaboradores);
+    }
+    if (loadMoreButton) {
+        loadMoreButton.addEventListener('click', carregarMais);
+    }
+    
+    // --- Event Listeners do Painel de Gestão - COM CHECAGEM ---
+    if (metaForm) {
+        metaForm.addEventListener('submit', handleMetaSubmit);
+    }
+    
+    // --- Event Listeners da Navegação ---
     setupNavigation();
+    console.log("DEBUG: 3. Navegação e Listeners configurados."); // <-- DEBUG 3
 
     // --- Carga Inicial ---
     popularFiltrosDinamicos();
-    carregarColaboradores();
+    popularDropdownMetas(); 
+    carregarColaboradores(); // Carrega os cards
+    console.log("DEBUG: 4. Carga inicial de dados disparada."); // <-- DEBUG 4
 }
 
-// ======== Função de Navegação da Sidebar (COM LOGOUT MODIFICADO) ========
+// 4. Função de Navegação da Sidebar
 function setupNavigation() {
     const navVisaoGeral = document.getElementById('nav-visao-geral');
     const navPainelGestao = document.getElementById('nav-painel-gestao');
@@ -65,51 +86,50 @@ function setupNavigation() {
     const contentVisaoGeral = document.getElementById('visao-geral-content');
     const contentGestao = document.getElementById('gestao-content');
 
-    navVisaoGeral.addEventListener('click', (e) => {
-        e.preventDefault();
-        contentVisaoGeral.style.display = 'block';
-        contentGestao.style.display = 'none';
-        
-        navVisaoGeral.classList.add('active');
-        navPainelGestao.classList.remove('active');
-    });
+    if (navVisaoGeral) {
+        navVisaoGeral.addEventListener('click', (e) => {
+            e.preventDefault();
+            contentVisaoGeral.style.display = 'block';
+            contentGestao.style.display = 'none';
+            
+            navVisaoGeral.classList.add('active');
+            navPainelGestao.classList.remove('active');
+        });
+    }
 
-    navPainelGestao.addEventListener('click', (e) => {
-        e.preventDefault();
-        contentVisaoGeral.style.display = 'none';
-        contentGestao.style.display = 'block';
+    if (navPainelGestao) {
+        navPainelGestao.addEventListener('click', (e) => {
+            e.preventDefault();
+            contentVisaoGeral.style.display = 'none';
+            contentGestao.style.display = 'block';
 
-        navVisaoGeral.classList.remove('active');
-        navPainelGestao.classList.add('active');
-    });
+            navVisaoGeral.classList.remove('active');
+            navPainelGestao.classList.add('active');
+            
+            // Carrega o relatório ao clicar na aba
+            carregarRelatorioMetas();
+        });
+    }
 
-    // --- Função de Logout (MODIFICADA) ---
-    navSair.addEventListener('click', (e) => {
-        e.preventDefault();
-        // Limpa a sessão do navegador
-        sessionStorage.removeItem('usuarioLogado');
-        sessionStorage.removeItem('usuarioNome');
-        
-        // Envia o usuário de volta para o login
-        window.location.href = 'login.html';
-    });
+    if (navSair) {
+        navSair.addEventListener('click', (e) => {
+            e.preventDefault();
+            sessionStorage.removeItem('usuarioLogado');
+            sessionStorage.removeItem('usuarioNome');
+            window.location.href = 'login.html';
+        });
+    }
 }
-// =======================================================
 
 
-// 4. Funções de Busca de Dados (Sem alterações, apenas nome da tabela)
-// (Lembre-se de usar o nome correto da sua tabela aqui no lugar de 'QLP')
-const NOME_TABELA = 'QLP'; 
-
+// 5. Funções da "Visão Geral" (Cards de Colaboradores)
 function buildQuery() {
     const searchTerm = searchBar.value.trim();
     const status = filterStatus.value;
     const area = filterArea.value;
     const cargo = filterCargo.value;
     const lider = filterLider.value;
-
-    let query = supabaseClient.from(NOME_TABELA).select('*');
-
+    let query = supabaseClient.from(NOME_TABELA_QLP).select('*');
     if (searchTerm) {
         query = query.ilike('NOME', `%${searchTerm}%`);
     }
@@ -134,22 +154,26 @@ function buildQuery() {
     query = query.order('NOME', { ascending: true });
     return query;
 }
-
 async function carregarColaboradores() {
+    console.log("DEBUG: 5. carregarColaboradores() chamado..."); // <-- DEBUG 5
     currentPage = 0; 
+    
+    // Verificação de segurança
+    if (!loadingIndicator || !dashboardContainer || !loadMoreButton) {
+        console.error("DEBUG: Elementos principais (loading, dashboard) são nulos! Verifique o HTML.");
+        return;
+    }
+    
     loadingIndicator.style.display = 'block';
     dashboardContainer.innerHTML = ''; 
     loadMoreButton.style.display = 'none'; 
     loadMoreButton.disabled = false;
-
     const startIndex = 0;
     const endIndex = ITENS_POR_PAGINA - 1;
-
     let query = buildQuery();
     const { data, error } = await query.range(startIndex, endIndex);
-
+    
     loadingIndicator.style.display = 'none';
-
     if (error) {
         console.error('Erro ao buscar dados:', error);
         dashboardContainer.innerHTML = "<p>Erro ao carregar dados. Verifique o console.</p>";
@@ -159,50 +183,39 @@ async function carregarColaboradores() {
         dashboardContainer.innerHTML = "<p>Nenhum colaborador encontrado.</p>";
         return;
     }
-
     let cardsHTML = '';
     data.forEach(colaborador => {
         cardsHTML += criarCardColaborador(colaborador);
     });
     dashboardContainer.innerHTML = cardsHTML;
-
     if (data.length === ITENS_POR_PAGINA) {
         loadMoreButton.style.display = 'block';
     }
+    console.log("DEBUG: 6. Colaboradores carregados e desenhados."); // <-- DEBUG 6
 }
-
 async function carregarMais() {
     currentPage++;
     loadMoreButton.disabled = true;
     loadMoreButton.textContent = 'Carregando...';
-
     const startIndex = currentPage * ITENS_POR_PAGINA;
     const endIndex = startIndex + ITENS_POR_PAGINA - 1;
-
     let query = buildQuery();
     const { data, error } = await query.range(startIndex, endIndex);
-
     if (error) {
         console.error('Erro ao buscar mais dados:', error);
         loadMoreButton.textContent = 'Erro ao carregar';
         return;
     }
-
     data.forEach(colaborador => {
         dashboardContainer.innerHTML += criarCardColaborador(colaborador);
     });
-
     loadMoreButton.disabled = false;
     loadMoreButton.textContent = 'Carregar Mais';
-
     if (data.length < ITENS_POR_PAGINA) {
         loadMoreButton.style.display = 'none';
     }
 }
-
-// 5. Função de Criar Card (Sem alterações)
 function criarCardColaborador(colaborador) {
-    // ... (Função idêntica à anterior, oculta para brevidade) ...
     const status = colaborador.SITUACAO || 'Indefinido'; 
     const nome = colaborador.NOME || '';
     const cpf = colaborador.CPF || '';
@@ -226,6 +239,8 @@ function criarCardColaborador(colaborador) {
         statusClass = 'status-desligados';
     }
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
+    
+    // ======== ERRO CORRIGIDO AQUI ========
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
@@ -264,12 +279,16 @@ function criarCardColaborador(colaborador) {
     `;
 }
 
-// 6. Função de Popular Filtros (Sem alterações)
+// 6. Funções de População de Filtros (Visão Geral)
 async function popularFiltrosDinamicos() {
+    // Verificação de segurança
+    if (!filterArea || !filterCargo || !filterLider) {
+        console.warn("DEBUG: Dropdowns de filtro não encontrados.");
+        return;
+    }
     const { data, error } = await supabaseClient
-        .from(NOME_TABELA)
-        .select('*'); 
-
+        .from(NOME_TABELA_QLP)
+        .select('ATIVIDADE, CARGO_ATUAL, LIDER'); 
     if (error) {
         console.error('Erro ao buscar dados para filtros:', error);
         return;
@@ -277,13 +296,151 @@ async function popularFiltrosDinamicos() {
     const areas = [...new Set(data.map(item => item.ATIVIDADE).filter(Boolean))].sort();
     const cargos = [...new Set(data.map(item => item.CARGO_ATUAL).filter(Boolean))].sort();
     const lideres = [...new Set(data.map(item => item.LIDER).filter(Boolean))].sort();
+    
     areas.forEach(area => {
         filterArea.innerHTML += `<option value="${area}">${area}</option>`;
     });
     cargos.forEach(cargo => {
         filterCargo.innerHTML += `<option value="${cargo}">${cargo}</option>`;
     });
-    lideres.forEach(lider => {
+    
+    // ======== ERRO CORRIGIDO AQUI ========
+    lideres.forEach(lider => { // <- O nome da variável aqui era 'lVlider' e estava usando 'lider' dentro
         filterLider.innerHTML += `<option value="${lider}">${lider}</option>`;
     });
 }
+
+
+// 7. Funções do "Painel de Gestão"
+async function popularDropdownMetas() {
+    // Verificação de segurança
+    if (!metaAreaSelect) {
+        console.warn("DEBUG: Dropdown de metas não encontrado.");
+        return;
+    }
+    const { data, error } = await supabaseClient
+        .from(NOME_TABELA_QLP)
+        .select('ATIVIDADE');
+    if (error) {
+        console.error('Erro ao buscar áreas para o dropdown de metas:', error);
+        return;
+    }
+    const areas = [...new Set(data.map(item => item.ATIVIDADE).filter(Boolean))].sort();
+    metaAreaSelect.innerHTML = '<option value="">Selecione uma área...</option>';
+    areas.forEach(area => {
+        metaAreaSelect.innerHTML += `<option value="${area}">${area}</option>`;
+    });
+}
+
+async function handleMetaSubmit(e) {
+    e.preventDefault();
+    const areaSelecionada = metaAreaSelect.value;
+    const metaValor = metaValorInput.value;
+    if (!areaSelecionada || metaValor === '') {
+        alert('Por favor, selecione uma área e preencha o valor da meta.');
+        return;
+    }
+    metaSubmitButton.disabled = true;
+    metaSubmitButton.textContent = 'Salvando...';
+    metaSuccessMessage.style.visibility = 'hidden';
+    const { error } = await supabaseClient
+        .from(NOME_TABELA_METAS)
+        .upsert(
+            { area: areaSelecionada, meta: parseInt(metaValor) },
+            { onConflict: 'area' } 
+        );
+    metaSubmitButton.disabled = false;
+    metaSubmitButton.textContent = 'Salvar Meta';
+    if (error) {
+        console.error('Erro ao salvar meta:', error);
+        alert('Erro ao salvar a meta. Verifique o console.');
+    } else {
+        metaSuccessMessage.style.visibility = 'visible';
+        setTimeout(() => { metaSuccessMessage.style.visibility = 'hidden'; }, 3000);
+        metaForm.reset();
+        carregarRelatorioMetas(); // Atualiza a tabela
+    }
+}
+
+async function carregarRelatorioMetas() {
+    // Verificação de segurança
+    if (!reportTableBody) {
+        console.error("DEBUG: Tabela de relatório (reportTableBody) não encontrada.");
+        return;
+    }
+    reportTableBody.innerHTML = '<tr><td colspan="3">Carregando relatório...</td></tr>';
+    // Passo 1: Buscar as Metas
+    const { data: metasData, error: metasError } = await supabaseClient
+        .from(NOME_TABELA_METAS)
+        .select('area, meta');
+    if (metasError) {
+        console.error('Erro ao buscar metas:', metasError);
+        reportTableBody.innerHTML = '<tr><td colspan="3">Erro ao carregar metas.</td></tr>';
+        return;
+    }
+    const metasMap = metasData.reduce((acc, item) => {
+        acc[item.area] = item.meta;
+        return acc;
+    }, {});
+
+    // Passo 2: Buscar o "Real"
+    const { data: qlpData, error: qlpError } = await supabaseClient
+        .from(NOME_TABELA_QLP)
+        .select('ATIVIDADE, SITUACAO'); 
+    if (qlpError) {
+        console.error('Erro ao buscar QLP para contagem:', qlpError);
+        reportTableBody.innerHTML = '<tr><td colspan="3">Erro ao carregar dados reais.</td></tr>';
+        return;
+    }
+    
+    // Filtra apenas colaboradores "ATIVO" (com segurança)
+    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
+    
+    const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
+        if (ATIVIDADE) {
+            acc[ATIVIDADE] = (acc[ATIVIDADE] || 0) + 1;
+        }
+        return acc;
+    }, {});
+
+    // Passo 3: Combinar os dados
+    const todasAreas = [...new Set([...Object.keys(metasMap), ...Object.keys(realCounts)])].sort();
+    if (todasAreas.length === 0) {
+        reportTableBody.innerHTML = '<tr><td colspan="3">Nenhum dado de área encontrado.</td></tr>';
+        return;
+    }
+    reportTableBody.innerHTML = ''; 
+    todasAreas.forEach(area => {
+        const meta = metasMap[area] || 0;
+        const real = realCounts[area] || 0;
+        const linhaHTML = `
+            <tr>
+                <td>${area}</td>
+                <td>${meta}</td>
+                <td>${real}</td>
+            </tr>
+        `;
+        reportTableBody.innerHTML += linhaHTML;
+    });
+}
+
+
+// ======== 8. Auth Guard (Proteção da Página com sessionStorage) ========
+(function() {
+    console.log("DEBUG: Auth Guard INICIADO."); // <-- DEBUG 0
+    if (sessionStorage.getItem('usuarioLogado') !== 'true') {
+        console.log("DEBUG: Usuário NÃO logado. Redirecionando para login.html");
+        window.location.href = 'login.html';
+    } else {
+        console.log("DEBUG: Usuário LOGADO. Verificando DOM...");
+        // Se houver sessão, o usuário está logado.
+        if (document.readyState === 'loading') {
+            console.log("DEBUG: DOM carregando. Aguardando DOMContentLoaded.");
+            document.addEventListener('DOMContentLoaded', setupDashboard);
+        } else {
+            // DOM já está pronto!
+            console.log("DEBUG: DOM pronto. Executando setupDashboard() agora.");
+            setupDashboard();
+        }
+    }
+})();
