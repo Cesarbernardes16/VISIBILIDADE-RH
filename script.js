@@ -60,7 +60,7 @@ async function carregarColaboradores() {
 function criarCardColaborador(colaborador) {
     
     // ---- Mapeamento dos dados (COM OS NOMES CORRIGIDOS DO PRINT) ----
-    const status = colaborador.SITUAÇÃO || 'Indefinido'; // COM TIL
+    const status = colaborador.SITUACAO || 'Indefinido'; // COM TIL
     const nome = colaborador.NOME || '';
     const cpf = colaborador.CPF || '';
     const funcao = colaborador.CARGO_ATUAL || '';
