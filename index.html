@@ -1,4 +1,73 @@
-<div id="gestao-content" class="content-section" style="display: none;">
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visão RH - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+</head>
+<body class="dashboard-body">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <span class="material-icons-outlined user-icon">account_circle</span>
+            <div class="user-info">
+                <h3>Sistema de Gestão</h3>
+                <p>Dashboard Principal</p>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" id="nav-visao-geral" class="nav-link active">
+                <span class="material-icons-outlined">bar_chart</span>
+                Visão Geral
+            </a>
+            <a href="#" id="nav-painel-gestao" class="nav-link">
+                <span class="material-icons-outlined">settings</span>
+                Painel de Gestão
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="#" id="nav-sair" class="nav-link">
+                <span class="material-icons-outlined">logout</span>
+                Sair
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <div id="visao-geral-content" class="content-section active">
+            <header>
+                <h1>Visão RH - Colaboradores</h1>
+            </header>
+            
+            <div class="filter-container">
+                <input type="text" id="search-bar" placeholder="Pesquisar por Nome...">
+                <select id="filter-status">
+                    <option value="">Todo Status</option>
+                    <option value="ATIVO">Ativo</option>
+                    <option value="AFASTADO">Afastado</option>
+                    <option value="DESLIGADOS">Desligado</option>
+                </select>
+                <select id="filter-area">
+                    <option value="">Toda Área</option>
+                </select>
+                <select id="filter-lider">
+                    <option value="">Todo Líder</option>
+                </select>
+            </div>
+            
+            <div id="dashboard-container">
+                <div id="loading-indicator">Carregando colaboradores...</div>
+            </div>
+            
+            <div id="pagination-container">
+                <button id="load-more-button" style="display: none;">Carregar Mais</button>
+            </div>
+        </div>
+
+        <div id="gestao-content" class="content-section" style="display: none;">
             <header>
                 <h1>Painel de Gestão - Metas QLP</h1>
             </header>
@@ -10,7 +79,7 @@
                         <label for="meta-area">Área:</label>
                         <select id="meta-area" required>
                             <option value="">Selecione uma área...</option>
-                            </select>
+                        </select>
                     </div>
                     <div class="input-group">
                         <label for="meta-valor">Meta (Nº de Colaboradores):</label>
@@ -39,5 +108,12 @@
                     </tbody>
                 </table>
             </div>
-
         </div>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

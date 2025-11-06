@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 2. Elementos HTML (Globais - só declaração)
-let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterCargo, filterLider, loadMoreButton;
+let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton; // filterCargo REMOVIDO
 let metaForm, metaAreaSelect, metaValorInput, metaSubmitButton, metaSuccessMessage, reportTableBody;
 
 // Constantes de Paginação
@@ -27,7 +27,7 @@ function setupDashboard() {
     searchBar = document.getElementById('search-bar');
     filterStatus = document.getElementById('filter-status');
     filterArea = document.getElementById('filter-area');
-    filterCargo = document.getElementById('filter-cargo');
+    // filterCargo = document.getElementById('filter-cargo'); // REMOVIDO
     filterLider = document.getElementById('filter-lider');
     loadMoreButton = document.getElementById('load-more-button');
     
@@ -51,9 +51,9 @@ function setupDashboard() {
     if (filterArea) {
         filterArea.addEventListener('change', carregarColaboradores);
     }
-    if (filterCargo) {
-        filterCargo.addEventListener('change', carregarColaboradores);
-    }
+    // if (filterCargo) { // REMOVIDO
+    //     filterCargo.addEventListener('change', carregarColaboradores);
+    // }
     if (filterLider) {
         filterLider.addEventListener('change', carregarColaboradores);
     }
@@ -127,7 +127,7 @@ function buildQuery() {
     const searchTerm = searchBar.value.trim();
     const status = filterStatus.value;
     const area = filterArea.value;
-    const cargo = filterCargo.value;
+    // const cargo = filterCargo.value; // REMOVIDO (ESTA ERA A LINHA 130)
     const lider = filterLider.value;
     let query = supabaseClient.from(NOME_TABELA_QLP).select('*');
     if (searchTerm) {
@@ -145,9 +145,9 @@ function buildQuery() {
     if (area) {
         query = query.eq('ATIVIDADE', area);
     }
-    if (cargo) {
-        query = query.eq('CARGO_ATUAL', cargo);
-    }
+    // if (cargo) { // REMOVIDO
+    //     query = query.eq('CARGO_ATUAL', cargo);
+    // }
     if (lider) {
         query = query.eq('LIDER', lider);
     }
@@ -219,7 +219,7 @@ function criarCardColaborador(colaborador) {
     const status = colaborador.SITUACAO || 'Indefinido'; 
     const nome = colaborador.NOME || '';
     const cpf = colaborador.CPF || '';
-    const funcao = colaborador.CARGO_ATUAL || '';
+    const funcao = colaborador.FUNCAO || ''; // Assumindo que o nome da coluna possa ser FUNCAO
     const area = colaborador.ATIVIDADE || '';
     const tempoEmpresa = colaborador.TEMPO_DE_EMPRESA || '';
     const escolaridade = colaborador.Escolaridade || ''; 
@@ -240,7 +240,6 @@ function criarCardColaborador(colaborador) {
     }
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
     
-    // ======== ERRO CORRIGIDO AQUI ========
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
@@ -282,30 +281,32 @@ function criarCardColaborador(colaborador) {
 // 6. Funções de População de Filtros (Visão Geral)
 async function popularFiltrosDinamicos() {
     // Verificação de segurança
-    if (!filterArea || !filterCargo || !filterLider) {
+    if (!filterArea || !filterLider) { // filterCargo REMOVIDO
         console.warn("DEBUG: Dropdowns de filtro não encontrados.");
         return;
     }
+    
+    // Corrigido para .select('*') para evitar o erro 400
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE, CARGO_ATUAL, LIDER'); 
+        .select('*'); 
+
     if (error) {
         console.error('Erro ao buscar dados para filtros:', error);
         return;
     }
     const areas = [...new Set(data.map(item => item.ATIVIDADE).filter(Boolean))].sort();
-    const cargos = [...new Set(data.map(item => item.CARGO_ATUAL).filter(Boolean))].sort();
+    // const cargos = [...new Set(data.map(item => item.CARGO_ATUAL).filter(Boolean))].sort(); // REMOVIDO
     const lideres = [...new Set(data.map(item => item.LIDER).filter(Boolean))].sort();
     
     areas.forEach(area => {
         filterArea.innerHTML += `<option value="${area}">${area}</option>`;
     });
-    cargos.forEach(cargo => {
-        filterCargo.innerHTML += `<option value="${cargo}">${cargo}</option>`;
-    });
+    // cargos.forEach(cargo => { // REMOVIDO
+    //     filterCargo.innerHTML += `<option value="${cargo}">${cargo}</option>`;
+    // });
     
-    // ======== ERRO CORRIGIDO AQUI ========
-    lideres.forEach(lider => { // <- O nome da variável aqui era 'lVlider' e estava usando 'lider' dentro
+    lideres.forEach(lider => {
         filterLider.innerHTML += `<option value="${lider}">${lider}</option>`;
     });
 }
@@ -318,9 +319,12 @@ async function popularDropdownMetas() {
         console.warn("DEBUG: Dropdown de metas não encontrado.");
         return;
     }
+    
+    // Corrigido para .select('*') para evitar o erro 400
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE');
+        .select('*');
+    
     if (error) {
         console.error('Erro ao buscar áreas para o dropdown de metas:', error);
         return;
@@ -353,7 +357,7 @@ async function handleMetaSubmit(e) {
     metaSubmitButton.textContent = 'Salvar Meta';
     if (error) {
         console.error('Erro ao salvar meta:', error);
-        alert('Erro ao salvar a meta. Verifique o console.');
+        alert('Erro ao salvar a meta. Verifique o console.'); // O pop-up vem daqui
     } else {
         metaSuccessMessage.style.visibility = 'visible';
         setTimeout(() => { metaSuccessMessage.style.visibility = 'hidden'; }, 3000);
@@ -369,6 +373,7 @@ async function carregarRelatorioMetas() {
         return;
     }
     reportTableBody.innerHTML = '<tr><td colspan="3">Carregando relatório...</td></tr>';
+    
     // Passo 1: Buscar as Metas
     const { data: metasData, error: metasError } = await supabaseClient
         .from(NOME_TABELA_METAS)
