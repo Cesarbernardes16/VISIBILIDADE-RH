@@ -1,38 +1,106 @@
-// 1. Configuração do Cliente Supabase
-// (Oculto para brevidade, sem alterações)
+// 1. Configuração do Cliente Supabase (PARA OS DADOS)
+// Isso AINDA é necessário para carregar os colaboradores!
 if (typeof SUPABASE_CONFIG === 'undefined') {
-    console.error("Erro: Arquivo 'config.js' não foi carregado ou está vazio.");
-    document.getElementById('dashboard-container').innerHTML = 
-        "<p>Erro fatal de configuração. Verifique o console.</p>";
+    console.error("Erro: Arquivo 'config.js' não foi carregado.");
 }
 const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL === 'SEU_URL_SUPABASE') {
-     console.error("Erro: Por favor, preencha suas credenciais do Supabase no arquivo 'config.js'.");
-     document.getElementById('dashboard-container').innerHTML = 
-        "<p>Erro de configuração. Conexão com o banco de dados falhou.</p>";
-}
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
-// 2. Elementos HTML 
-const dashboardContainer = document.getElementById('dashboard-container');
-const loadingIndicator = document.getElementById('loading-indicator');
-const searchBar = document.getElementById('search-bar');
-const filterStatus = document.getElementById('filter-status');
-const filterArea = document.getElementById('filter-area');
-const filterCargo = document.getElementById('filter-cargo');
-const filterLider = document.getElementById('filter-lider');
+// ======== NOVO: Auth Guard (Proteção da Página com sessionStorage) ========
+if (sessionStorage.getItem('usuarioLogado') !== 'true') {
+    // Se não houver sessão, chuta o usuário para o login
+    window.location.href = 'login.html';
+} else {
+    // Se houver sessão, o usuário está logado.
+    // Dispara o setup do dashboard
+    document.addEventListener('DOMContentLoaded', setupDashboard);
+}
+// =======================================================================
 
-// ======== NOVOS Elementos de Paginação ========
-const loadMoreButton = document.getElementById('load-more-button');
+
+// 2. Elementos HTML (Globais)
+let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterCargo, filterLider, loadMoreButton;
+
+// Constantes de Paginação
 const ITENS_POR_PAGINA = 30;
 let currentPage = 0;
-// ============================================
 
 
-// ---- NOVA FUNÇÃO: Constrói a query baseada nos filtros ----
-// Isso evita repetir o código em 'carregarColaboradores' e 'carregarMais'
+// 3. Função Principal de Setup
+function setupDashboard() {
+    // Pega os elementos do DOM
+    dashboardContainer = document.getElementById('dashboard-container');
+    loadingIndicator = document.getElementById('loading-indicator');
+    searchBar = document.getElementById('search-bar');
+    filterStatus = document.getElementById('filter-status');
+    filterArea = document.getElementById('filter-area');
+    filterCargo = document.getElementById('filter-cargo');
+    filterLider = document.getElementById('filter-lider');
+    loadMoreButton = document.getElementById('load-more-button');
+    
+    // --- Event Listeners dos Filtros ---
+    searchBar.addEventListener('input', carregarColaboradores);
+    filterStatus.addEventListener('change', carregarColaboradores);
+    filterArea.addEventListener('change', carregarColaboradores);
+    filterCargo.addEventListener('change', carregarColaboradores);
+    filterLider.addEventListener('change', carregarColaboradores);
+    loadMoreButton.addEventListener('click', carregarMais);
+    
+    // --- Event Listeners da Nova Navegação ---
+    setupNavigation();
+
+    // --- Carga Inicial ---
+    popularFiltrosDinamicos();
+    carregarColaboradores();
+}
+
+// ======== Função de Navegação da Sidebar (COM LOGOUT MODIFICADO) ========
+function setupNavigation() {
+    const navVisaoGeral = document.getElementById('nav-visao-geral');
+    const navPainelGestao = document.getElementById('nav-painel-gestao');
+    const navSair = document.getElementById('nav-sair');
+    
+    const contentVisaoGeral = document.getElementById('visao-geral-content');
+    const contentGestao = document.getElementById('gestao-content');
+
+    navVisaoGeral.addEventListener('click', (e) => {
+        e.preventDefault();
+        contentVisaoGeral.style.display = 'block';
+        contentGestao.style.display = 'none';
+        
+        navVisaoGeral.classList.add('active');
+        navPainelGestao.classList.remove('active');
+    });
+
+    navPainelGestao.addEventListener('click', (e) => {
+        e.preventDefault();
+        contentVisaoGeral.style.display = 'none';
+        contentGestao.style.display = 'block';
+
+        navVisaoGeral.classList.remove('active');
+        navPainelGestao.classList.add('active');
+    });
+
+    // --- Função de Logout (MODIFICADA) ---
+    navSair.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Limpa a sessão do navegador
+        sessionStorage.removeItem('usuarioLogado');
+        sessionStorage.removeItem('usuarioNome');
+        
+        // Envia o usuário de volta para o login
+        window.location.href = 'login.html';
+    });
+}
+// =======================================================
+
+
+// 4. Funções de Busca de Dados (Sem alterações, apenas nome da tabela)
+// (Lembre-se de usar o nome correto da sua tabela aqui no lugar de 'QLP')
+const NOME_TABELA = 'QLP'; 
+
 function buildQuery() {
     const searchTerm = searchBar.value.trim();
     const status = filterStatus.value;
@@ -40,10 +108,10 @@ function buildQuery() {
     const cargo = filterCargo.value;
     const lider = filterLider.value;
 
-    let query = supabaseClient.from('QLP').select('*');
+    let query = supabaseClient.from(NOME_TABELA).select('*');
 
     if (searchTerm) {
-        query = query.or(`NOME.ilike.%${searchTerm}%,CPF.ilike.%${searchTerm}%`);
+        query = query.ilike('NOME', `%${searchTerm}%`);
     }
     if (status) {
         if (status === 'AFASTADO') {
@@ -63,24 +131,17 @@ function buildQuery() {
     if (lider) {
         query = query.eq('LIDER', lider);
     }
-    
-    // Ordena por nome para garantir consistência na paginação
     query = query.order('NOME', { ascending: true });
-
     return query;
 }
 
-
-// 3. Função para carregar e exibir os colaboradores (MODIFICADA)
-// Esta função agora é para NOVAS buscas (reseta a página para 0)
 async function carregarColaboradores() {
-    currentPage = 0; // Reseta a página
+    currentPage = 0; 
     loadingIndicator.style.display = 'block';
-    dashboardContainer.innerHTML = ''; // Limpa cards antigos
-    loadMoreButton.style.display = 'none'; // Esconde o botão
+    dashboardContainer.innerHTML = ''; 
+    loadMoreButton.style.display = 'none'; 
     loadMoreButton.disabled = false;
 
-    // Calcula o range da primeira página
     const startIndex = 0;
     const endIndex = ITENS_POR_PAGINA - 1;
 
@@ -94,28 +155,24 @@ async function carregarColaboradores() {
         dashboardContainer.innerHTML = "<p>Erro ao carregar dados. Verifique o console.</p>";
         return;
     }
-
     if (data.length === 0) {
         dashboardContainer.innerHTML = "<p>Nenhum colaborador encontrado.</p>";
         return;
     }
 
-    // Cria e insere os cards
     let cardsHTML = '';
     data.forEach(colaborador => {
         cardsHTML += criarCardColaborador(colaborador);
     });
     dashboardContainer.innerHTML = cardsHTML;
 
-    // Mostra o botão "Carregar Mais" apenas se houverem mais itens
     if (data.length === ITENS_POR_PAGINA) {
         loadMoreButton.style.display = 'block';
     }
 }
 
-// ---- NOVA FUNÇÃO: Carregar mais itens (Páginas 2, 3, etc.) ----
 async function carregarMais() {
-    currentPage++; // Incrementa a página
+    currentPage++;
     loadMoreButton.disabled = true;
     loadMoreButton.textContent = 'Carregando...';
 
@@ -131,23 +188,19 @@ async function carregarMais() {
         return;
     }
 
-    // Cria os cards e ADICIONA no container
     data.forEach(colaborador => {
         dashboardContainer.innerHTML += criarCardColaborador(colaborador);
     });
 
-    // Reativa o botão
     loadMoreButton.disabled = false;
     loadMoreButton.textContent = 'Carregar Mais';
 
-    // Se a busca retornou menos itens que o limite, é a última página
     if (data.length < ITENS_POR_PAGINA) {
         loadMoreButton.style.display = 'none';
     }
 }
 
-
-// 5. Função para criar o HTML de um único card (Sem alterações)
+// 5. Função de Criar Card (Sem alterações)
 function criarCardColaborador(colaborador) {
     // ... (Função idêntica à anterior, oculta para brevidade) ...
     const status = colaborador.SITUACAO || 'Indefinido'; 
@@ -164,7 +217,6 @@ function criarCardColaborador(colaborador) {
     const turno = colaborador.TURNO || '';
     const lider = colaborador.LIDER || '';
     const dataPromocao = colaborador.DATA_PROMOCAO || '';
-
     let statusClass = '';
     if (status.toUpperCase() === 'ATIVO') {
         statusClass = 'status-ativo';
@@ -173,9 +225,7 @@ function criarCardColaborador(colaborador) {
     } else if (status.toUpperCase() === 'DESLIGADOS' || status.toUpperCase() === 'DESPEDIDA') {
         statusClass = 'status-desligados';
     }
-
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
-
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
@@ -214,12 +264,10 @@ function criarCardColaborador(colaborador) {
     `;
 }
 
-// 6. Função para Popular os filtros (Sem alterações)
-// (Recomendo otimizar isso no futuro, mas não é o foco agora)
+// 6. Função de Popular Filtros (Sem alterações)
 async function popularFiltrosDinamicos() {
-    // (Função idêntica à anterior, oculta para brevidade)
     const { data, error } = await supabaseClient
-        .from('QLP')
+        .from(NOME_TABELA)
         .select('*'); 
 
     if (error) {
@@ -239,22 +287,3 @@ async function popularFiltrosDinamicos() {
         filterLider.innerHTML += `<option value="${lider}">${lider}</option>`;
     });
 }
-
-// 7. Chama as funções principais (MODIFICADO)
-document.addEventListener('DOMContentLoaded', () => {
-    // Event listeners dos filtros agora chamam a função de "reset"
-    searchBar.addEventListener('input', carregarColaboradores);
-    filterStatus.addEventListener('change', carregarColaboradores);
-    filterArea.addEventListener('change', carregarColaboradores);
-    filterCargo.addEventListener('change', carregarColaboradores);
-    filterLider.addEventListener('change', carregarColaboradores);
-
-    // ---- NOVO: Event listener para o botão "Carregar Mais" ----
-    loadMoreButton.addEventListener('click', carregarMais);
-
-    // Popula os dropdowns de filtro
-    popularFiltrosDinamicos();
-    
-    // Carrega os colaboradores (Página 0) pela primeira vez
-    carregarColaboradores();
-});
