@@ -10,17 +10,43 @@
 
     <header>
         <h1>Visão RH - Colaboradores</h1>
-        </header>
+    </header>
+
+    <div class="filter-container">
+        <input type="text" id="search-bar" placeholder="Pesquisar por Nome ou CPF...">
+        
+        <select id="filter-status">
+            <option value="">Todo Status</option>
+            <option value="ATIVO">Ativo</option>
+            <option value="AFASTADO">Afastado</option>
+            <option value="DESLIGADOS">Desligado</option>
+        </select>
+        
+        <select id="filter-area">
+            <option value="">Toda Área</option>
+            </select>
+
+        <select id="filter-cargo">
+            <option value="">Todo Cargo</option>
+            </select>
+
+        <select id="filter-lider">
+            <option value="">Todo Líder</option>
+            </select>
+    </div>
 
     <main>
         <div id="dashboard-container">
-            </div>
-</main>
+            <div id="loading-indicator">Carregando colaboradores...</div>
+        </div>
+
+        <div id="pagination-container">
+            <button id="load-more-button" style="display: none;">Carregar Mais</button>
+        </div>
+        </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="config.js"></script>
-    
     <script src="script.js"></script>
 </body>
 </html>

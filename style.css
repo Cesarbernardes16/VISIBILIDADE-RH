@@ -11,6 +11,40 @@ header {
     color: #333;
 }
 
+/* ======== Estilos do Container de Filtros ======== */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.filter-container input[type="text"],
+.filter-container select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9em;
+    background-color: #fff;
+    min-width: 180px;
+}
+
+.filter-container input[type="text"] {
+    flex-grow: 1;
+    max-width: 300px; /* Limita o tamanho da barra de busca */
+}
+
+/* ======== Estilo do Indicador de Carregamento ======== */
+#loading-indicator {
+    display: none; /* Começa escondido */
+    width: 100%;
+    text-align: center;
+    font-size: 1.2em;
+    color: #555;
+    padding: 40px;
+}
+
 /* Container principal dos cards */
 #dashboard-container {
     display: flex;
@@ -21,7 +55,15 @@ header {
 
 /* O card do colaborador */
 .employee-card {
-    width: 380px; /* Largura fixa para cada card */
+    /* width: 380px; */ /* REMOVIDO: Largura fixa */
+    
+    /* ======== Estilo Responsivo ======== */
+    flex-grow: 1;         /* Permite que o card cresça */
+    flex-shrink: 1;       /* Permite que o card encolha */
+    flex-basis: 340px;    /* Base de largura ideal */
+    max-width: 390px;     /* Largura máxima */
+    min-width: 300px;     /* Largura mínima */
+
     background-color: #ffffff;
     border: 1px solid #ddd;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -107,6 +149,9 @@ header {
 .card-body p span {
     text-align: right;
     color: #333;
+    /* Adicionado para quebrar o texto se for muito longo */
+    word-break: break-word;
+    flex-basis: 60%; 
 }
 
 /* Destaque para o PCD: SIM (como na imagem) */
@@ -122,4 +167,34 @@ header {
 .pcd-badge.pcd-nao {
     background-color: #f8d7da; /* Vermelho claro */
     color: #721c24; /* Vermelho escuro */
+}
+
+/* ======== NOVO: Estilos da Paginação ======== */
+#pagination-container {
+    width: 100%;
+    text-align: center;
+    padding: 20px 0;
+}
+
+#load-more-button {
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    color: #fff;
+    background-color: #007bff; /* Um azul padrão */
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+#load-more-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+#load-more-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
 }
