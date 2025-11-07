@@ -78,11 +78,11 @@
 
         <div id="gestao-content" class="content-section" style="display: none;">
             <header>
-                <h1>Painel de Gestão - Metas QLP</h1>
+                <h1>Painel de Gestão - Metas</h1>
             </header>
             
             <div class="form-container">
-                <h2>Cadastrar/Atualizar Meta</h2>
+                <h2>Cadastrar/Atualizar Metas da Área</h2>
                 <form id="meta-form" class="meta-form">
                     <div class="input-group">
                         <label for="meta-area">Área:</label>
@@ -91,17 +91,28 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label for="meta-valor">Meta (Nº de Colaboradores):</label>
-                        <input type="number" id="meta-valor" placeholder="Ex: 85" min="0" required>
+                        <label for="meta-valor">Meta QLP (Nº Total):</label>
+                        <input type="number" id="meta-valor" placeholder="Ex: 85" min="0">
                     </div>
-                    <button type="submit" id="meta-submit-button">Salvar Meta</button>
+                    
+                    <div class="input-group">
+                        <label for="meta-pcd-valor">Meta PCD (Nº):</label>
+                        <input type="number" id="meta-pcd-valor" placeholder="Ex: 5" min="0">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="meta-jovem-valor">Meta Jovem Aprendiz (Nº):</label>
+                        <input type="number" id="meta-jovem-valor" placeholder="Ex: 2" min="0">
+                    </div>
+                    
+                    <button type="submit" id="meta-submit-button">Salvar Metas</button>
                     <p id="meta-success-message" class="success-message"></p>
                 </form>
             </div>
 
             <div class="report-container">
-                <h2>Relatório: QLP por Área</h2>
-                <p>O "Real" é calculado com base nos colaboradores cadastrados.</p>
+                <h2>Relatório: Metas por Área (QLP Total)</h2>
+                <p>O "Real" é calculado com base nos colaboradores "ATIVOS".</p>
                 <table class="report-table">
                     <thead>
                         <tr>
@@ -110,7 +121,45 @@
                             <th>REAL</th>
                         </tr>
                     </thead>
-                    <tbody id="report-table-body">
+                    <tbody id="report-table-body-qlp">
+                        <tr>
+                            <td colspan="3">Carregando relatório...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="report-container">
+                <h2>Relatório: Metas por PCD</h2>
+                <p>O "Real" é calculado com base nos colaboradores "ATIVOS" com PCD = "SIM".</p>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>ÁREA</th>
+                            <th>META</th>
+                            <th>REAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body-pcd">
+                        <tr>
+                            <td colspan="3">Carregando relatório...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="report-container">
+                <h2>Relatório: Metas por Jovem Aprendiz</h2>
+                <p>O "Real" é calculado com base nos colaboradores "ATIVOS" com cargo "JOVEM APRENDIZ".</p>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>ÁREA</th>
+                            <th>META</th>
+                            <th>REAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body-jovem">
                         <tr>
                             <td colspan="3">Carregando relatório...</td>
                         </tr>
@@ -121,14 +170,27 @@
 
         <div id="graficos-content" class="content-section" style="display: none;">
             <header>
-                <h1>Gráficos - Metas QLP</h1>
+                <h1>Gráficos - Metas</h1>
             </header>
             
             <div class="chart-container">
-                <h2>Meta vs Real vs Gap (Faltantes)</h2>
-                <p>O "Gap" mostra quantos colaboradores faltam para atingir a meta (Meta - Real).</p>
+                <h2>Meta QLP vs Real vs Gap</h2>
+                <p>O "Gap" mostra quantos colaboradores faltam para atingir a meta total (Meta - Real).</p>
                 <canvas id="grafico-metas-qlp"></canvas>
             </div>
+
+            <div class="chart-container">
+                <h2>Meta PCD vs Real vs Gap</h2>
+                <p>O "Gap" mostra quantos colaboradores PCD faltam para atingir a meta.</p>
+                <canvas id="grafico-metas-pcd"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h2>Meta Jovem Aprendiz vs Real vs Gap</h2>
+                <p>O "Gap" mostra quantos colaboradores Jovem Aprendiz faltam para atingir a meta.</p>
+                <canvas id="grafico-metas-jovem"></canvas>
+            </div>
+
         </div>
 
     </main>

@@ -561,3 +561,44 @@ body {
     flex-basis: auto;  /* Faz o span ter o tamanho do seu conteúdo */
     text-align: center; /* Centraliza o "NAO" ou "SIM" dentro do badge */
 }
+/* --- CSS ATUALIZADO PARA 3 TABELAS DE RELATÓRIO --- */
+.report-container {
+    margin-bottom: 30px; /* Adiciona espaço entre os relatórios */
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.report-table th,
+.report-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+.report-table th {
+    background-color: #f8f9fa;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: bold;
+}
+
+/* Alinha a primeira coluna (ÁREA) à esquerda */
+.report-table td:first-child,
+.report-table th:first-child {
+    text-align: left;
+    font-weight: bold;
+}
+
+/* Centraliza colunas de META e REAL */
+.report-table th:nth-child(2), .report-table td:nth-child(2),
+.report-table th:nth-child(3), .report-table td:nth-child(3) {
+    text-align: center;
+    width: 100px;
+    font-weight: normal; /* Garante que os números não fiquem em negrito */
+}

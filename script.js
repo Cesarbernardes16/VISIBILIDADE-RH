@@ -153,10 +153,15 @@ function formatarTempoDeEmpresa(dias) {
 
 // 2. Elementos HTML (Globais - só declaração)
 let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton;
-let metaForm, metaAreaSelect, metaValorInput, metaSubmitButton, metaSuccessMessage, reportTableBody;
+let metaForm, metaAreaSelect, metaValorInput, metaPCDInput, metaJovemInput, metaSubmitButton, metaSuccessMessage;
 
-// ======== NOVO: Variável global para o Gráfico ========
-let metaChart = null; 
+// ======== ATUALIZADO: Três TBody Elements ========
+let reportTableBodyQLP, reportTableBodyPCD, reportTableBodyJovem;
+
+// ======== Variáveis globais para os Gráficos ========
+let metaChartQLP = null; 
+let metaChartPCD = null;
+let metaChartJovem = null;
 
 // Constantes de Paginação
 const ITENS_POR_PAGINA = 30;
@@ -182,9 +187,15 @@ function setupDashboard() {
     metaForm = document.getElementById('meta-form');
     metaAreaSelect = document.getElementById('meta-area');
     metaValorInput = document.getElementById('meta-valor');
+    metaPCDInput = document.getElementById('meta-pcd-valor'); 
+    metaJovemInput = document.getElementById('meta-jovem-valor'); 
     metaSubmitButton = document.getElementById('meta-submit-button');
     metaSuccessMessage = document.getElementById('meta-success-message');
-    reportTableBody = document.getElementById('report-table-body');
+
+    // ======== ATUALIZADO: Capturando os 3 <tbody> ========
+    reportTableBodyQLP = document.getElementById('report-table-body-qlp');
+    reportTableBodyPCD = document.getElementById('report-table-body-pcd');
+    reportTableBodyJovem = document.getElementById('report-table-body-jovem');
     
     console.log("DEBUG: 2. Elementos do DOM capturados."); 
 
@@ -249,7 +260,10 @@ function setupDashboard() {
         if (navPainelGestao) navPainelGestao.classList.remove('active');
         if (navGraficos) navGraficos.classList.add('active');
 
-        carregarGraficoMetas(); // Carrega o gráfico
+        // CHAMA TODOS OS GRÁFICOS
+        carregarGraficoQLP();
+        carregarGraficoPCD();
+        carregarGraficoJovemAprendiz();
 
     } else {
         // Padrão: Carrega a Visão Geral
@@ -318,8 +332,10 @@ function setupNavigation() {
             navPainelGestao.classList.remove('active');
             navGraficos.classList.add('active');
             
-            // Carrega o gráfico ao clicar na aba
-            carregarGraficoMetas();
+            // CHAMA TODOS OS GRÁFICOS
+            carregarGraficoQLP();
+            carregarGraficoPCD();
+            carregarGraficoJovemAprendiz();
             
             sessionStorage.setItem('activeTab', 'graficos'); 
         });
@@ -509,7 +525,7 @@ async function popularFiltrosDinamicos() {
     
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
-        .select('*'); 
+        .select('ATIVIDADE, LIDER'); // Otimizado para buscar só o necessário
 
     if (error) {
         console.error('Erro ao buscar dados para filtros:', error);
@@ -562,7 +578,7 @@ async function popularDropdownMetas() {
     
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
-        .select('*');
+        .select('ATIVIDADE'); // Otimizado
     
     if (error) {
         console.error('Erro ao buscar áreas para o dropdown de metas:', error);
@@ -590,9 +606,15 @@ async function popularDropdownMetas() {
 async function handleMetaSubmit(e) {
     e.preventDefault();
     const areaSelecionada = metaAreaSelect.value; // Isto vai pegar o valor original (quebrado), o que é CORRETO
-    const metaValor = metaValorInput.value;
-    if (!areaSelecionada || metaValor === '') {
-        alert('Por favor, selecione uma área e preencha o valor da meta.');
+    
+    // Pega todos os valores (ou 0 se estiver vazio)
+    // ATUALIZAÇÃO: Se o campo estiver vazio, salva NULL no banco, e não 0
+    const metaValor = metaValorInput.value ? parseInt(metaValorInput.value) : null;
+    const metaPCDValor = metaPCDInput.value ? parseInt(metaPCDInput.value) : null;
+    const metaJovemValor = metaJovemInput.value ? parseInt(metaJovemInput.value) : null;
+
+    if (!areaSelecionada) {
+        alert('Por favor, selecione uma área.');
         return;
     }
     metaSubmitButton.disabled = true;
@@ -600,15 +622,20 @@ async function handleMetaSubmit(e) {
     metaSuccessMessage.style.visibility = 'hidden';
     
     // O upsert usará a string original (ex: 'DISTRIBUIO URBANA')
-    // Isso é o correto, pois é como ela está salva no banco
     const { error } = await supabaseClient
         .from(NOME_TABELA_METAS)
         .upsert(
-            { area: areaSelecionada, meta: parseInt(metaValor) },
-            { onConflict: 'area' } 
+            { 
+                area: areaSelecionada, 
+                meta: metaValor,
+                meta_pcd: metaPCDValor,
+                meta_jovem: metaJovemValor
+            },
+            { onConflict: 'area' } // Chave do conflito é a 'area'
         );
+        
     metaSubmitButton.disabled = false;
-    metaSubmitButton.textContent = 'Salvar Meta';
+    metaSubmitButton.textContent = 'Salvar Metas';
     if (error) {
         console.error('Erro ao salvar meta:', error);
         alert('Erro ao salvar a meta. Verifique o console.'); 
@@ -620,157 +647,188 @@ async function handleMetaSubmit(e) {
     }
 }
 
-// ======== FUNÇÃO ATUALIZADA (CONFORME SOLICITADO) ========
-async function carregarRelatorioMetas() {
-    if (!reportTableBody) {
-        console.error("DEBUG: Tabela de relatório (reportTableBody) não encontrada.");
-        return;
-    }
-    reportTableBody.innerHTML = '<tr><td colspan="3">Carregando relatório...</td></tr>';
-    
-    // Passo 1: Buscar as Metas (igual a antes)
+
+// ======== 8. FUNÇÃO MESTRA DE BUSCA DE DADOS ========
+// Esta função centraliza a busca e processamento de dados
+async function fetchProcessedData() {
+    // Passo 1: Buscar as Metas
     const { data: metasData, error: metasError } = await supabaseClient
         .from(NOME_TABELA_METAS)
-        .select('area, meta');
+        .select('area, meta, meta_pcd, meta_jovem'); // Busca todas as metas
+        
     if (metasError) {
         console.error('Erro ao buscar metas:', metasError);
-        reportTableBody.innerHTML = '<tr><td colspan="3">Erro ao carregar metas.</td></tr>';
-        return;
+        return { error: metasError };
     }
+    // Converte o array de metas em um objeto (map) para fácil acesso
     const metasMap = metasData.reduce((acc, item) => {
-        acc[item.area] = item.meta; // Chaves aqui estão quebradas (ex: 'DISTRIBUIO URBANA')
+        acc[item.area] = item; // Chave é a área, valor é o objeto {area, meta, meta_pcd, ...}
         return acc;
     }, {});
 
-    // Passo 2: Buscar o "Real" (igual a antes, mas com uma adição)
+    // Passo 2: Buscar Dados Reais (colaboradores)
     const { data: qlpData, error: qlpError } = await supabaseClient
         .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE, SITUACAO'); 
+        .select('ATIVIDADE, SITUACAO, PCD, "CARGO ATUAL"'); // Busca só colunas necessárias
+        
     if (qlpError) {
         console.error('Erro ao buscar QLP para contagem:', qlpError);
-        reportTableBody.innerHTML = '<tr><td colspan="3">Erro ao carregar dados reais.</td></tr>';
-        return;
+        return { error: qlpError };
     }
     
-    // Filtra apenas colaboradores "ATIVO" (para o "Real")
-    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
-    
-    const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
-        if (ATIVIDADE) {
-            acc[ATIVIDADE] = (acc[ATIVIDADE] || 0) + 1; // Chaves aqui também estão quebradas
-        }
-        return acc;
-    }, {});
-
-    // ======== MUDANÇA (NOVO PASSO 3) ========
-    // Criar uma lista mestre de TODAS as áreas únicas que existem no QLP,
-    // usando os dados que já buscamos (qlpData).
-    const todasAreasUnicasDaQLP = qlpData.reduce((acc, { ATIVIDADE }) => {
-        if (ATIVIDADE) {
-            acc.add(ATIVIDADE); // 'add' é a função do Set para adicionar itens únicos
-        }
-        return acc;
-    }, new Set()); // Começa com um Set (lista de itens únicos) vazio
-    // =======================================
-
-
-    // Passo 4: Combinar os dados (agora incluindo a lista mestre)
-    // 'todasAreas' terá os nomes quebrados
-    const todasAreas = [...new Set([
-        ...Object.keys(metasMap),       // 1. Áreas que têm meta
-        ...Object.keys(realCounts),      // 2. Áreas que têm funcionários ativos
-        ...todasAreasUnicasDaQLP         // 3. (NOVO) Todas as áreas que existem
-    ])].sort();
-    
-    if (todasAreas.length === 0) {
-        reportTableBody.innerHTML = '<tr><td colspan="3">Nenhum dado de área encontrado.</td></tr>';
-        return;
-    }
-    reportTableBody.innerHTML = ''; 
-    todasAreas.forEach(area => {
-        const meta = metasMap[area] || 0;
-        const real = realCounts[area] || 0;
-        
-        // MODIFICAÇÃO: Aplicar correção APENAS na exibição do HTML
-        const areaCorrigida = corrigirStringQuebrada(area);
-        
-        const linhaHTML = `
-            <tr>
-                <td>${areaCorrigida}</td> 
-                <td>${meta}</td>
-                <td>${real}</td>
-            </tr>
-        `;
-        reportTableBody.innerHTML += linhaHTML;
-    });
-}
-// =======================================================
-
-
-// ======== 8. NOVA FUNÇÃO DE GRÁFICO ========
-async function carregarGraficoMetas() {
-    console.log("DEBUG: 7. carregarGraficoMetas() chamado...");
-    
-    // Passo 1: Buscar os dados (igual ao carregarRelatorioMetas)
-    const { data: metasData, error: metasError } = await supabaseClient
-        .from(NOME_TABELA_METAS)
-        .select('area, meta');
-    
-    if (metasError) {
-        console.error('Erro ao buscar metas para gráfico:', metasError);
-        return;
-    }
-    const metasMap = metasData.reduce((acc, item) => {
-        acc[item.area] = item.meta;
-        return acc;
-    }, {});
-
-    const { data: qlpData, error: qlpError } = await supabaseClient
-        .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE, SITUACAO'); 
-    
-    if (qlpError) {
-        console.error('Erro ao buscar QLP para gráfico:', qlpError);
-        return;
-    }
-    
-    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
-    const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
-        if (ATIVIDADE) {
-            acc[ATIVIDADE] = (acc[ATIVIDADE] || 0) + 1;
-        }
-        return acc;
-    }, {});
-
-    // Passo 2: Preparar os dados para o gráfico
-    // ======== MUDANÇA AQUI TAMBÉM ========
-    // Garante que o gráfico puxe todas as áreas, assim como a tabela
-    const todasAreasUnicasDaQLP = qlpData.reduce((acc, { ATIVIDADE }) => {
+    // Passo 3: Criar lista mestre de todas as áreas
+    const todasAreasUnicas = qlpData.reduce((acc, { ATIVIDADE }) => {
         if (ATIVIDADE) {
             acc.add(ATIVIDADE);
         }
         return acc;
     }, new Set());
 
+    // Combina áreas do QLP com áreas que podem ter só meta (sem funcionário)
     const todasAreas = [...new Set([
-        ...Object.keys(metasMap),
-        ...Object.keys(realCounts),
-        ...todasAreasUnicasDaQLP
+        ...todasAreasUnicas,
+        ...Object.keys(metasMap)
     ])].sort();
-    // =======================================
+
+    // Passo 4: Calcular o "Real" para cada área
+    const realMap = {}; // Objeto para guardar os contadores
+
+    // Filtra apenas colaboradores "ATIVO" (com segurança)
+    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
+
+    // Inicializa o mapa para todas as áreas
+    todasAreas.forEach(area => {
+        realMap[area] = { qlp: 0, pcd: 0, jovem: 0 };
+    });
+
+    // Processa os colaboradores ativos e incrementa os contadores
+    ativos.forEach(col => {
+        const area = col.ATIVIDADE;
+        if (!area || !realMap[area]) {
+            return; // Ignora se a área for nula ou não estiver na lista mestre
+        }
+
+        // 1. Contador QLP Total
+        realMap[area].qlp++;
+
+        // 2. Contador PCD
+        if (col.PCD && col.PCD.toUpperCase() === 'SIM') {
+            realMap[area].pcd++;
+        }
+
+        // 3. Contador Jovem Aprendiz
+        // (Ajuste a string "JOVEM APRENDIZ" se o cargo for outro)
+        const cargoAtual = col['CARGO ATUAL'] || ''; // Garante que não é nulo
+        if (cargoAtual.toUpperCase().includes('JOVEM APRENDIZ')) {
+            realMap[area].jovem++;
+        }
+    });
     
+    return { todasAreas, metasMap, realMap, error: null };
+}
+
+
+// ======== 9. FUNÇÕES DO PAINEL DE GESTÃO E GRÁFICOS (ATUALIZADAS) ========
+
+// ======== ATUALIZADO: carregarRelatorioMetas (agora preenche 3 tabelas) ========
+async function carregarRelatorioMetas() {
+    // Verifica se os 3 tbodys existem
+    if (!reportTableBodyQLP || !reportTableBodyPCD || !reportTableBodyJovem) {
+        console.error("DEBUG: Tabelas de relatório (tbody) não encontradas.");
+        return;
+    }
+    // Define "Carregando" para as 3 tabelas
+    reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
+    reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
+    reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
+    
+    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+
+    if (error) {
+        reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
+        reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
+        reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
+        return;
+    }
+    
+    if (todasAreas.length === 0) {
+        reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
+        reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
+        reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
+        return;
+    }
+    
+    let qlpHTML = '';
+    let pcdHTML = '';
+    let jovemHTML = '';
+
+    todasAreas.forEach(area => {
+        const metaObj = metasMap[area] || {};
+        const realObj = realMap[area] || { qlp: 0, pcd: 0, jovem: 0 };
+        const areaCorrigida = corrigirStringQuebrada(area);
+
+        const metaQLP = metaObj.meta || 0;
+        const realQLP = realObj.qlp;
+        
+        const metaPCD = metaObj.meta_pcd || 0;
+        const realPCD = realObj.pcd;
+        
+        const metaJovem = metaObj.meta_jovem || 0;
+        const realJovem = realObj.jovem;
+
+        // Tabela 1: QLP Total (Sempre mostra todas as áreas)
+        qlpHTML += `
+            <tr>
+                <td>${areaCorrigida}</td> 
+                <td>${metaQLP}</td>
+                <td>${realQLP}</td>
+            </tr>
+        `;
+
+        // Tabela 2: PCD (Só mostra se meta > 0 ou real > 0)
+        if (metaPCD > 0 || realPCD > 0) {
+            pcdHTML += `
+                <tr>
+                    <td>${areaCorrigida}</td> 
+                    <td>${metaPCD}</td>
+                    <td>${realPCD}</td>
+                </tr>
+            `;
+        }
+        
+        // Tabela 3: Jovem Aprendiz (Só mostra se meta > 0 ou real > 0)
+        if (metaJovem > 0 || realJovem > 0) {
+            jovemHTML += `
+                <tr>
+                    <td>${areaCorrigida}</td> 
+                    <td>${metaJovem}</td>
+                    <td>${realJovem}</td>
+                </tr>
+            `;
+        }
+    });
+
+    // Define o HTML final
+    reportTableBodyQLP.innerHTML = qlpHTML || `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
+    reportTableBodyPCD.innerHTML = pcdHTML || `<tr><td colspan="3">Nenhuma meta ou colaborador PCD encontrado.</td></tr>`;
+    reportTableBodyJovem.innerHTML = jovemHTML || `<tr><td colspan="3">Nenhuma meta ou Jovem Aprendiz encontrado.</td></tr>`;
+}
+
+// ------ FUNÇÕES DE GRÁFICO SEPARADAS ------
+
+async function carregarGraficoQLP() {
+    console.log("DEBUG: 7. carregarGraficoQLP() chamado...");
+    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    if (error) return;
+
     const labels = [];
     const metaData = [];
     const realData = [];
-    const gapData = []; // O "Gap" que você pediu
+    const gapData = [];
 
     todasAreas.forEach(area => {
-        const meta = metasMap[area] || 0;
-        const real = realCounts[area] || 0;
-        
-        // Calcula o Gap: quantos faltam (Meta - Real)
-        // Usamos Math.max(0, ...) para que o Gap nunca seja negativo
-        // Se o Real for 10 e a Meta 8, o Gap de "faltantes" é 0, não -2.
+        const meta = (metasMap[area] && metasMap[area].meta) || 0;
+        const real = (realMap[area] && realMap[area].qlp) || 0;
         const gap = Math.max(0, meta - real); 
 
         labels.push(corrigirStringQuebrada(area));
@@ -779,73 +837,132 @@ async function carregarGraficoMetas() {
         gapData.push(gap);
     });
 
-    // Passo 3: Desenhar o Gráfico
     const ctx = document.getElementById('grafico-metas-qlp').getContext('2d');
-    
-    // Destrói o gráfico antigo, se existir, para evitar sobreposição
-    if (metaChart) {
-        metaChart.destroy();
+    if (metaChartQLP) {
+        metaChartQLP.destroy();
     }
-
-    metaChart = new Chart(ctx, {
-        type: 'bar', // Tipo de gráfico: Barras
+    metaChartQLP = new Chart(ctx, {
+        type: 'bar',
         data: {
-            labels: labels, // Nomes das Áreas no eixo X
+            labels: labels,
             datasets: [
-                {
-                    label: 'Meta',
-                    data: metaData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)', // Azul
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Real',
-                    data: realData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)', // Verde
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                },
-                {
-                    label: 'Gap (Faltantes)',
-                    data: gapData,
-                    backgroundColor: 'rgba(255, 99, 132, 0.6)', // Vermelho
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }
+                { label: 'Meta', data: metaData, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
+                { label: 'Real', data: realData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                { label: 'Gap (Faltantes)', data: gapData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
             ]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    position: 'top', // Legenda no topo
-                },
-                title: {
-                    display: false, // Já temos um título no HTML
-                }
-            },
+            plugins: { legend: { position: 'top' } },
             scales: {
-                y: {
-                    beginAtZero: true, // Eixo Y começa no zero
-                    title: {
-                        display: true,
-                        text: 'Nº de Colaboradores'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Áreas'
-                    }
-                }
+                y: { beginAtZero: true, title: { display: true, text: 'Nº de Colaboradores' } },
+                x: { title: { display: true, text: 'Áreas' } }
+            }
+        }
+    });
+}
+
+async function carregarGraficoPCD() {
+    console.log("DEBUG: 8. carregarGraficoPCD() chamado...");
+    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    if (error) return;
+
+    const labels = [];
+    const metaData = [];
+    const realData = [];
+    const gapData = [];
+
+    todasAreas.forEach(area => {
+        const meta = (metasMap[area] && metasMap[area].meta_pcd) || 0;
+        const real = (realMap[area] && realMap[area].pcd) || 0;
+        const gap = Math.max(0, meta - real);
+
+        // Só adiciona ao gráfico se houver meta ou real (para não poluir)
+        if (meta > 0 || real > 0) {
+            labels.push(corrigirStringQuebrada(area));
+            metaData.push(meta);
+            realData.push(real);
+            gapData.push(gap);
+        }
+    });
+
+    const ctx = document.getElementById('grafico-metas-pcd').getContext('2d');
+    if (metaChartPCD) {
+        metaChartPCD.destroy();
+    }
+    metaChartPCD = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Meta PCD', data: metaData, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
+                { label: 'Real PCD', data: realData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                { label: 'Gap (Faltantes)', data: gapData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Nº de Colaboradores PCD' } },
+                x: { title: { display: true, text: 'Áreas' } }
+            }
+        }
+    });
+}
+
+async function carregarGraficoJovemAprendiz() {
+    console.log("DEBUG: 9. carregarGraficoJovemAprendiz() chamado...");
+    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    if (error) return;
+
+    const labels = [];
+    const metaData = [];
+    const realData = [];
+    const gapData = [];
+
+    todasAreas.forEach(area => {
+        const meta = (metasMap[area] && metasMap[area].meta_jovem) || 0;
+        const real = (realMap[area] && realMap[area].jovem) || 0;
+        const gap = Math.max(0, meta - real);
+
+        // Só adiciona ao gráfico se houver meta ou real (para não poluir)
+        if (meta > 0 || real > 0) {
+            labels.push(corrigirStringQuebrada(area));
+            metaData.push(meta);
+            realData.push(real);
+            gapData.push(gap);
+        }
+    });
+
+    const ctx = document.getElementById('grafico-metas-jovem').getContext('2d');
+    if (metaChartJovem) {
+        metaChartJovem.destroy();
+    }
+    metaChartJovem = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Meta Jovem Aprendiz', data: metaData, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
+                { label: 'Real Jovem Aprendiz', data: realData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                { label: 'Gap (Faltantes)', data: gapData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Nº de Jovens Aprendizes' } },
+                x: { title: { display: true, text: 'Áreas' } }
             }
         }
     });
 }
 
 
-// ======== 9. Auth Guard (Proteção da Página com sessionStorage) ========
+
+// ======== 10. Auth Guard (Proteção da Página com sessionStorage) ========
 (function() {
     console.log("DEBUG: Auth Guard INICIADO."); 
     if (sessionStorage.getItem('usuarioLogado') !== 'true') {
