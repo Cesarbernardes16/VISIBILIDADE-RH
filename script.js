@@ -442,7 +442,7 @@ function criarCardColaborador(colaborador) {
     // ======== FORMATAÇÃO DE TEMPO DE EMPRESA APLICADA ========
     const tempoEmpresa = formatarTempoDeEmpresa(colaborador['TEMPO DE EMPRESA']); 
     
-    const escolaridade = corrigirStringQuebrada(colaborador.Escolaridade) || ''; 
+    const escolaridade = corrigirStringQuebrada(colaborador.ESCOLARIDADE) || ''; 
     const salario = formatarSalario(colaborador.SALARIO); 
     const pcd = colaborador.PCD || 'NÃO'; 
     const telefone = colaborador.CONTATO || ''; 

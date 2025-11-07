@@ -344,13 +344,25 @@ body {
 }
 .card-body p strong {
     color: #000;
-    margin-right: 5px;
+    margin-right: 10px;  /* Aumentei um pouco o espaço */
+
+    /* Define uma largura base fixa para todos os rótulos */
+    /* Ajustei para 220px para caber os rótulos mais longos */
+    flex-basis: 220px; 
+
+    /* Impede que o rótulo encolha */
+    flex-shrink: 0;      
 }
+
 .card-body p span {
     text-align: right;
     color: #333;
     word-break: break-word;
-    flex-basis: 60%; 
+
+    /* Faz o <span> (valor) crescer e ocupar o espaço restante */
+    flex-grow: 1; 
+
+    /* Removemos o flex-basis: 60% que causava o problema */
 }
 
 /* Badge PCD */
