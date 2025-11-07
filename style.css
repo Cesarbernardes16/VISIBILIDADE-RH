@@ -279,9 +279,15 @@ body {
 .employee-card {
     flex-grow: 1;
     flex-shrink: 1;
-    flex-basis: 340px;
-    max-width: 390px;
-    min-width: 300px;
+    
+    /* ======== MUDANÇA 1: Ajuste de Largura ======== */
+    /* Define uma base de 390px (como na sua imagem "boa") */
+    flex-basis: 390px; 
+    /* Permite crescer se houver espaço */
+    max-width: 420px;
+    /* IMPEDE que o card encolha a ponto de quebrar o layout interno */
+    min-width: 390px; 
+    
     background-color: #ffffff;
     border: 1px solid #ddd;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -340,30 +346,37 @@ body {
     font-size: 0.9em;
     color: #555;
     display: flex;
-    justify-content: space-between; 
+    /* Remove o space-between para o alinhamento à esquerda funcionar */
+    /* justify-content: space-between; */ 
 }
+
+/* ======== MUDANÇA 2: Ajuste das colunas ======== */
+
+/* Esta é a "coluna" dos rótulos (NOME:, CPF:, etc.) */
 .card-body p strong {
     color: #000;
-    margin-right: 10px;  /* Aumentei um pouco o espaço */
-
-    /* Define uma largura base fixa para todos os rótulos */
-    /* Ajustei para 220px para caber os rótulos mais longos */
-    flex-basis: 220px; 
-
-    /* Impede que o rótulo encolha */
-    flex-shrink: 0;      
+    margin-right: 10px;  /* Espaço entre o rótulo e o valor */
+    
+    /* Largura fixa para caber o rótulo mais longo (CLASSIFICAÇÃO...) */
+    flex-basis: 240px; 
+    
+    flex-shrink: 0; /* Impede que o rótulo encolha */
+    text-align: left; /* Garante que o rótulo esteja à esquerda */
 }
 
+/* Esta é a "coluna" dos valores (Abrair Garcia, 1 mês, etc.) */
 .card-body p span {
-    text-align: right;
+    text-align: left; /* Alinha o valor à esquerda */
     color: #333;
-    word-break: break-word;
+    
+    /* Permite que valores longos quebrem a linha */
+    word-break: break-word;  
 
-    /* Faz o <span> (valor) crescer e ocupar o espaço restante */
-    flex-grow: 1; 
-
-    /* Removemos o flex-basis: 60% que causava o problema */
+    flex-grow: 1; /* Faz o <span> (valor) crescer e ocupar o espaço restante */
+    min-width: 0; /* Ajuda o flexbox a calcular a quebra de linha */
 }
+/* ======== FIM DA CORREÇÃO DE ALINHAMENTO ======== */
+
 
 /* Badge PCD */
 .pcd-badge {
@@ -373,6 +386,18 @@ body {
 }
 .pcd-badge.pcd-sim { background-color: #d4edda; color: #155724; }
 .pcd-badge.pcd-nao { background-color: #f8d7da; color: #721c24; }
+
+/* ======== CORREÇÃO PARA O BADGE PCD (Mantida) ======== */
+.card-body p span.pcd-badge {
+    flex-basis: auto;  /* Faz o span ter o tamanho do seu conteúdo */
+    flex-grow: 0;      /* Impede que o badge cresça */
+    text-align: center; 
+    
+    /* O justify-content: space-between foi removido do <p> */
+    /* Precisamos forçar o badge para a direita */
+    margin-left: auto;
+}
+
 
 /* Estilos da Paginação (Botão Carregar Mais) */
 #pagination-container {
