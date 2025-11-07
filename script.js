@@ -6,20 +6,62 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ======== NOVA FUNÇÃO DE CORREÇÃO (VERSÃO 4 - MAIS FORTE) ========
+function corrigirStringQuebrada(texto) {
+    if (typeof texto !== 'string' || !texto) {
+        return texto;
+    }
+
+    // O problema é o caractere '' (Replacement Character).
+    // Se o texto contiver este caractere, tentamos adivinhar qual era a palavra.
+    if (texto.includes('')) {
+        
+        // Caso 1: DISTRIBUIÇÃO
+        // (Ex: "DISTRIBUIO URBANA" ou "Ajudante Distribuico")
+        if (texto.includes('DISTRIBUI') || texto.includes('Distribu')) {
+            if (texto.includes('URBANA')) {
+                return 'DISTRIBUIÇÃO URBANA';
+            }
+            if (texto.includes('Ajudante')) {
+                return 'Ajudante Distribuição';
+            }
+            return 'DISTRIBUIÇÃO'; // Padrão
+        }
+        
+        // Caso 2: Operações (Ex: "Analista Operaes")
+        if (texto.includes('Opera')) {
+            return 'Analista Operações';
+        }
+        
+        // Caso 3: Negócios (Ex: "Representante de Negcios II")
+        if (texto.includes('Neg')) {
+            return 'Representante de Negócios II';
+        }
+
+        // Se encontrar '' mas não souber corrigir, retorna o original (melhor do que quebrar)
+        return texto;
+    }
+    
+    // Se não houver '', o texto está limpo.
+    return texto;
+}
+// ================================================================
+
+
 // 2. Elementos HTML (Globais - só declaração)
-let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton; // filterCargo REMOVIDO
+let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton;
 let metaForm, metaAreaSelect, metaValorInput, metaSubmitButton, metaSuccessMessage, reportTableBody;
 
 // Constantes de Paginação
 const ITENS_POR_PAGINA = 30;
 let currentPage = 0;
-const NOME_TABELA_QLP = 'QLP'; // Verifique se 'QLP' é o nome exato
+const NOME_TABELA_QLP = 'QLP';
 const NOME_TABELA_METAS = 'metas_qlp';
 
 
 // 3. Função Principal de Setup (COM DEBUG)
 function setupDashboard() {
-    console.log("DEBUG: 1. setupDashboard() EXECUTADO!"); // <-- DEBUG 1
+    console.log("DEBUG: 1. setupDashboard() EXECUTADO!"); 
 
     // --- Elementos da "Visão Geral" ---
     dashboardContainer = document.getElementById('dashboard-container');
@@ -38,7 +80,7 @@ function setupDashboard() {
     metaSuccessMessage = document.getElementById('meta-success-message');
     reportTableBody = document.getElementById('report-table-body');
     
-    console.log("DEBUG: 2. Elementos do DOM capturados."); // <-- DEBUG 2
+    console.log("DEBUG: 2. Elementos do DOM capturados."); 
 
     // --- Event Listeners dos Filtros (Visão Geral) - COM CHECAGEM ---
     if (searchBar) {
@@ -64,13 +106,36 @@ function setupDashboard() {
     
     // --- Event Listeners da Navegação ---
     setupNavigation();
-    console.log("DEBUG: 3. Navegação e Listeners configurados."); // <-- DEBUG 3
+    console.log("DEBUG: 3. Navegação e Listeners configurados."); 
 
     // --- Carga Inicial ---
     popularFiltrosDinamicos();
     popularDropdownMetas(); 
-    carregarColaboradores(); // Carrega os cards
-    console.log("DEBUG: 4. Carga inicial de dados disparada."); // <-- DEBUG 4
+
+    // ======== MODIFICAÇÃO: Restaura a aba ativa ou define o padrão ========
+    const activeTab = sessionStorage.getItem('activeTab');
+
+    if (activeTab === 'gestao') {
+        // Captura os elementos de navegação e conteúdo
+        const navVisaoGeral = document.getElementById('nav-visao-geral');
+        const navPainelGestao = document.getElementById('nav-painel-gestao');
+        const contentVisaoGeral = document.getElementById('visao-geral-content');
+        const contentGestao = document.getElementById('gestao-content');
+
+        // Ativa a aba de Gestão
+        if (contentVisaoGeral) contentVisaoGeral.style.display = 'none';
+        if (contentGestao) contentGestao.style.display = 'block';
+        if (navVisaoGeral) navVisaoGeral.classList.remove('active');
+        if (navPainelGestao) navPainelGestao.classList.add('active');
+        
+        carregarRelatorioMetas(); // Carrega o relatório
+    } else {
+        // Padrão: Carrega a Visão Geral
+        carregarColaboradores(); // Carrega os cards
+    }
+    // ================== FIM DA MODIFICAÇÃO ==================
+    
+    console.log("DEBUG: 4. Carga inicial de dados disparada."); 
 }
 
 // 4. Função de Navegação da Sidebar
@@ -90,6 +155,8 @@ function setupNavigation() {
             
             navVisaoGeral.classList.add('active');
             navPainelGestao.classList.remove('active');
+            
+            sessionStorage.setItem('activeTab', 'visao-geral'); 
         });
     }
 
@@ -104,6 +171,8 @@ function setupNavigation() {
             
             // Carrega o relatório ao clicar na aba
             carregarRelatorioMetas();
+            
+            sessionStorage.setItem('activeTab', 'gestao'); 
         });
     }
 
@@ -112,6 +181,7 @@ function setupNavigation() {
             e.preventDefault();
             sessionStorage.removeItem('usuarioLogado');
             sessionStorage.removeItem('usuarioNome');
+            sessionStorage.removeItem('activeTab'); 
             window.location.href = 'login.html';
         });
     }
@@ -120,13 +190,10 @@ function setupNavigation() {
 
 // 5. Funções da "Visão Geral" (Cards de Colaboradores)
 function buildQuery() {
-    // ======== CORREÇÃO CRÍTICA (ANTI-FALHA) ========
-    // Adicionamos verificações '?' para evitar o crash se o elemento for 'null'
     const searchTerm = searchBar ? searchBar.value.trim() : '';
     const status = filterStatus ? filterStatus.value : '';
     const area = filterArea ? filterArea.value : '';
     const lider = filterLider ? filterLider.value : '';
-    // ===============================================
 
     let query = supabaseClient.from(NOME_TABELA_QLP).select('*');
     if (searchTerm) {
@@ -142,6 +209,7 @@ function buildQuery() {
         }
     }
     if (area) {
+        // 'area' aqui é o valor original (quebrado), o que é correto para o filtro
         query = query.eq('ATIVIDADE', area);
     }
     if (lider) {
@@ -151,7 +219,7 @@ function buildQuery() {
     return query;
 }
 async function carregarColaboradores() {
-    console.log("DEBUG: 5. carregarColaboradores() chamado..."); // <-- DEBUG 5
+    console.log("DEBUG: 5. carregarColaboradores() chamado..."); 
     currentPage = 0; 
     
     // Verificação de segurança
@@ -187,7 +255,7 @@ async function carregarColaboradores() {
     if (data.length === ITENS_POR_PAGINA) {
         loadMoreButton.style.display = 'block';
     }
-    console.log("DEBUG: 6. Colaboradores carregados e desenhados."); // <-- DEBUG 6
+    console.log("DEBUG: 6. Colaboradores carregados e desenhados."); 
 }
 async function carregarMais() {
     currentPage++;
@@ -212,20 +280,22 @@ async function carregarMais() {
     }
 }
 function criarCardColaborador(colaborador) {
+    // MODIFICAÇÃO: Aplicando a função de correção nos campos
     const status = colaborador.SITUACAO || 'Indefinido'; 
-    const nome = colaborador.NOME || '';
+    const nome = corrigirStringQuebrada(colaborador.NOME) || '';
     const cpf = colaborador.CPF || '';
-    const funcao = colaborador.FUNCAO || ''; // Assumindo que o nome da coluna possa ser FUNCAO
-    const area = colaborador.ATIVIDADE || '';
+    const funcao = corrigirStringQuebrada(colaborador.FUNCAO) || '';
+    const area = corrigirStringQuebrada(colaborador.ATIVIDADE) || '';
     const tempoEmpresa = colaborador.TEMPO_DE_EMPRESA || '';
-    const escolaridade = colaborador.Escolaridade || ''; 
+    const escolaridade = corrigirStringQuebrada(colaborador.Escolaridade) || ''; 
     const salario = colaborador.SALARIO || ''; 
     const pcd = colaborador.PCD || 'NÃO'; 
     const telefone = colaborador.CONTATO || ''; 
     const telEmergencia = colaborador.CONT_FAMILIAR || '';
     const turno = colaborador.TURNO || '';
-    const lider = colaborador.LIDER || '';
+    const lider = corrigirStringQuebrada(colaborador.LIDER) || '';
     const dataPromocao = colaborador.DATA_PROMOCAO || '';
+    
     let statusClass = '';
     if (status.toUpperCase() === 'ATIVO') {
         statusClass = 'status-ativo';
@@ -276,13 +346,11 @@ function criarCardColaborador(colaborador) {
 
 // 6. Funções de População de Filtros (Visão Geral)
 async function popularFiltrosDinamicos() {
-    // Verificação de segurança
     if (!filterArea || !filterLider) { 
-        console.warn("DEBUG: Dropdowns de filtro não encontrados (ou ainda não carregados).");
-        return; // Não é um erro fatal, apenas não popula os filtros
+        console.warn("DEBUG: Dropdowns de filtro não encontrados.");
+        return;
     }
     
-    // Corrigido para .select('*') para evitar o erro 400
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
         .select('*'); 
@@ -291,28 +359,43 @@ async function popularFiltrosDinamicos() {
         console.error('Erro ao buscar dados para filtros:', error);
         return;
     }
-    const areas = [...new Set(data.map(item => item.ATIVIDADE).filter(Boolean))].sort();
-    const lideres = [...new Set(data.map(item => item.LIDER).filter(Boolean))].sort();
-    
-    areas.forEach(area => {
-        filterArea.innerHTML += `<option value="${area}">${area}</option>`;
+
+    // MODIFICAÇÃO: Lógica de preenchimento dos filtros corrigida
+    const areasMap = new Map();
+    data.forEach(item => {
+        if (item.ATIVIDADE) {
+            // Salva o original (quebrado) e o corrigido
+            areasMap.set(item.ATIVIDADE, corrigirStringQuebrada(item.ATIVIDADE));
+        }
+    });
+    // Ordena pelos nomes corrigidos
+    const sortedAreas = [...areasMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    sortedAreas.forEach(([original, corrigido])]) => {
+        // O 'value' é o original (para o filtro funcionar)
+        // O texto (innerHTML) é o corrigido (para o usuário ver)
+        filterArea.innerHTML += `<option value="${original}">${corrigido}</option>`;
     });
     
-    lideres.forEach(lider => {
-        filterLider.innerHTML += `<option value="${lider}">${lider}</option>`;
+    const lideresMap = new Map();
+    data.forEach(item => {
+        if (item.LIDER) {
+            lideresMap.set(item.LIDER, corrigirStringQuebrada(item.LIDER));
+        }
+    });
+    const sortedLideres = [...lideresMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    sortedLideres.forEach(([original, corrigido]) => {
+        filterLider.innerHTML += `<option value="${original}">${corrigido}</option>`;
     });
 }
 
 
 // 7. Funções do "Painel de Gestão"
 async function popularDropdownMetas() {
-    // Verificação de segurança
     if (!metaAreaSelect) {
         console.warn("DEBUG: Dropdown de metas não encontrado.");
         return;
     }
     
-    // Corrigido para .select('*') para evitar o erro 400
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
         .select('*');
@@ -321,16 +404,28 @@ async function popularDropdownMetas() {
         console.error('Erro ao buscar áreas para o dropdown de metas:', error);
         return;
     }
-    const areas = [...new Set(data.map(item => item.ATIVIDADE).filter(Boolean))].sort();
+    
+    // MODIFICAÇÃO: Lógica de preenchimento do dropdown corrigida
+    const areasMap = new Map();
+    data.forEach(item => {
+        if (item.ATIVIDADE) {
+            areasMap.set(item.ATIVIDADE, corrigirStringQuebrada(item.ATIVIDADE));
+        }
+    });
+    
     metaAreaSelect.innerHTML = '<option value="">Selecione uma área...</option>';
-    areas.forEach(area => {
-        metaAreaSelect.innerHTML += `<option value="${area}">${area}</option>`;
+    
+    const sortedAreas = [...areasMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    sortedAreas.forEach(([original, corrigido]) => {
+        // O 'value' é o original (quebrado) para salvar no banco
+        // O texto (innerHTML) é o corrigido (para o usuário ver)
+        metaAreaSelect.innerHTML += `<option value="${original}">${corrigido}</option>`;
     });
 }
 
 async function handleMetaSubmit(e) {
     e.preventDefault();
-    const areaSelecionada = metaAreaSelect.value;
+    const areaSelecionada = metaAreaSelect.value; // Isto vai pegar o valor original (quebrado), o que é CORRETO
     const metaValor = metaValorInput.value;
     if (!areaSelecionada || metaValor === '') {
         alert('Por favor, selecione uma área e preencha o valor da meta.');
@@ -339,6 +434,9 @@ async function handleMetaSubmit(e) {
     metaSubmitButton.disabled = true;
     metaSubmitButton.textContent = 'Salvando...';
     metaSuccessMessage.style.visibility = 'hidden';
+    
+    // O upsert usará a string original (ex: 'DISTRIBUIO URBANA')
+    // Isso é o correto, pois é como ela está salva no banco
     const { error } = await supabaseClient
         .from(NOME_TABELA_METAS)
         .upsert(
@@ -349,7 +447,7 @@ async function handleMetaSubmit(e) {
     metaSubmitButton.textContent = 'Salvar Meta';
     if (error) {
         console.error('Erro ao salvar meta:', error);
-        alert('Erro ao salvar a meta. Verifique o console.'); // O pop-up vem daqui
+        alert('Erro ao salvar a meta. Verifique o console.'); 
     } else {
         metaSuccessMessage.style.visibility = 'visible';
         setTimeout(() => { metaSuccessMessage.style.visibility = 'hidden'; }, 3000);
@@ -359,7 +457,6 @@ async function handleMetaSubmit(e) {
 }
 
 async function carregarRelatorioMetas() {
-    // Verificação de segurança
     if (!reportTableBody) {
         console.error("DEBUG: Tabela de relatório (reportTableBody) não encontrada.");
         return;
@@ -376,7 +473,7 @@ async function carregarRelatorioMetas() {
         return;
     }
     const metasMap = metasData.reduce((acc, item) => {
-        acc[item.area] = item.meta;
+        acc[item.area] = item.meta; // Chaves aqui estão quebradas (ex: 'DISTRIBUIO URBANA')
         return acc;
     }, {});
 
@@ -391,17 +488,19 @@ async function carregarRelatorioMetas() {
     }
     
     // Filtra apenas colaboradores "ATIVO" (com segurança)
-    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
+    const ativos = qlpData.filter(col => col.SITUACAO && col.STUAO.toUpperCase() === 'ATIVO');
     
     const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
         if (ATIVIDADE) {
-            acc[ATIVIDADE] = (acc[ATIVIDADE] || 0) + 1;
+            acc[ATIVIDADE] = (acc[ATIVIDADE] || 0) + 1; // Chaves aqui também estão quebradas
         }
         return acc;
     }, {});
 
     // Passo 3: Combinar os dados
+    // 'todasAreas' terá os nomes quebrados, o que é correto para o join
     const todasAreas = [...new Set([...Object.keys(metasMap), ...Object.keys(realCounts)])].sort();
+    
     if (todasAreas.length === 0) {
         reportTableBody.innerHTML = '<tr><td colspan="3">Nenhum dado de área encontrado.</td></tr>';
         return;
@@ -410,9 +509,13 @@ async function carregarRelatorioMetas() {
     todasAreas.forEach(area => {
         const meta = metasMap[area] || 0;
         const real = realCounts[area] || 0;
+        
+        // MODIFICAÇÃO: Aplicar correção APENAS na exibição do HTML
+        const areaCorrigida = corrigirStringQuebrada(area);
+        
         const linhaHTML = `
             <tr>
-                <td>${area}</td>
+                <td>${areaCorrigida}</td> 
                 <td>${meta}</td>
                 <td>${real}</td>
             </tr>
@@ -424,7 +527,7 @@ async function carregarRelatorioMetas() {
 
 // ======== 8. Auth Guard (Proteção da Página com sessionStorage) ========
 (function() {
-    console.log("DEBUG: Auth Guard INICIADO."); // <-- DEBUG 0
+    console.log("DEBUG: Auth Guard INICIADO."); 
     if (sessionStorage.getItem('usuarioLogado') !== 'true') {
         console.log("DEBUG: Usuário NÃO logado. Redirecionando para login.html");
         window.location.href = 'login.html';
