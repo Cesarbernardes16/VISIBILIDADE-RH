@@ -277,16 +277,16 @@ body {
 
 /* O card do colaborador */
 .employee-card {
-    flex-grow: 1;
-    flex-shrink: 1;
+    /* ======== A CORREÇÃO ESTÁ AQUI ======== */
+    /* Removemos flex-grow e flex-shrink para que o card NÃO mude de tamanho */
+    /* flex-grow: 1; */ 
+    /* flex-shrink: 1; */ 
     
-    /* ======== MUDANÇA 1: Ajuste de Largura ======== */
-    /* Define uma base de 390px (como na sua imagem "boa") */
-    flex-basis: 390px; 
-    /* Permite crescer se houver espaço */
-    max-width: 420px;
-    /* IMPEDE que o card encolha a ponto de quebrar o layout interno */
-    min-width: 390px; 
+    /* Definimos uma LARGURA FIXA que bate com a sua imagem-objetivo (image_93d725.png) */
+    /* Isso garante que há espaço para os 240px do rótulo + o valor */
+    width: 450px;
+    
+    /* Removemos flex-basis, min-width e max-width que estavam causando conflito */
     
     background-color: #ffffff;
     border: 1px solid #ddd;
@@ -346,11 +346,8 @@ body {
     font-size: 0.9em;
     color: #555;
     display: flex;
-    /* Remove o space-between para o alinhamento à esquerda funcionar */
-    /* justify-content: space-between; */ 
+    /* justify-content: space-between; */ /* Removido para o alinhamento à esquerda funcionar */
 }
-
-/* ======== MUDANÇA 2: Ajuste das colunas ======== */
 
 /* Esta é a "coluna" dos rótulos (NOME:, CPF:, etc.) */
 .card-body p strong {
@@ -369,13 +366,12 @@ body {
     text-align: left; /* Alinha o valor à esquerda */
     color: #333;
     
-    /* Permite que valores longos quebrem a linha */
+    /* Permite que valores longos (como o nome do líder) quebrem a linha */
     word-break: break-word;  
 
     flex-grow: 1; /* Faz o <span> (valor) crescer e ocupar o espaço restante */
     min-width: 0; /* Ajuda o flexbox a calcular a quebra de linha */
 }
-/* ======== FIM DA CORREÇÃO DE ALINHAMENTO ======== */
 
 
 /* Badge PCD */
@@ -393,8 +389,7 @@ body {
     flex-grow: 0;      /* Impede que o badge cresça */
     text-align: center; 
     
-    /* O justify-content: space-between foi removido do <p> */
-    /* Precisamos forçar o badge para a direita */
+    /* Força o badge para a direita */
     margin-left: auto;
 }
 

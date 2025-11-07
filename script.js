@@ -128,7 +128,7 @@ function formatarTempoDeEmpresa(dias) {
 
     // Usamos 365.25 para uma média mais precisa (anos bissextos)
     const anos = Math.floor(numDias / 365.25);
-    // 30.44 é a média de dias em um mês (365.25 / 12)
+    // 30.44 é η média de dias em um mês (365.25 / 12)
     const meses = Math.floor((numDias % 365.25) / 30.44); 
 
     let resultado = '';
@@ -620,6 +620,7 @@ async function handleMetaSubmit(e) {
     }
 }
 
+// ======== FUNÇÃO ATUALIZADA (CONFORME SOLICITADO) ========
 async function carregarRelatorioMetas() {
     if (!reportTableBody) {
         console.error("DEBUG: Tabela de relatório (reportTableBody) não encontrada.");
@@ -627,7 +628,7 @@ async function carregarRelatorioMetas() {
     }
     reportTableBody.innerHTML = '<tr><td colspan="3">Carregando relatório...</td></tr>';
     
-    // Passo 1: Buscar as Metas
+    // Passo 1: Buscar as Metas (igual a antes)
     const { data: metasData, error: metasError } = await supabaseClient
         .from(NOME_TABELA_METAS)
         .select('area, meta');
@@ -641,7 +642,7 @@ async function carregarRelatorioMetas() {
         return acc;
     }, {});
 
-    // Passo 2: Buscar o "Real"
+    // Passo 2: Buscar o "Real" (igual a antes, mas com uma adição)
     const { data: qlpData, error: qlpError } = await supabaseClient
         .from(NOME_TABELA_QLP)
         .select('ATIVIDADE, SITUACAO'); 
@@ -651,7 +652,7 @@ async function carregarRelatorioMetas() {
         return;
     }
     
-    // Filtra apenas colaboradores "ATIVO" (com segurança)
+    // Filtra apenas colaboradores "ATIVO" (para o "Real")
     const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
     
     const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
@@ -661,9 +662,25 @@ async function carregarRelatorioMetas() {
         return acc;
     }, {});
 
-    // Passo 3: Combinar os dados
-    // 'todasAreas' terá os nomes quebrados, o que é correto para o join
-    const todasAreas = [...new Set([...Object.keys(metasMap), ...Object.keys(realCounts)])].sort();
+    // ======== MUDANÇA (NOVO PASSO 3) ========
+    // Criar uma lista mestre de TODAS as áreas únicas que existem no QLP,
+    // usando os dados que já buscamos (qlpData).
+    const todasAreasUnicasDaQLP = qlpData.reduce((acc, { ATIVIDADE }) => {
+        if (ATIVIDADE) {
+            acc.add(ATIVIDADE); // 'add' é a função do Set para adicionar itens únicos
+        }
+        return acc;
+    }, new Set()); // Começa com um Set (lista de itens únicos) vazio
+    // =======================================
+
+
+    // Passo 4: Combinar os dados (agora incluindo a lista mestre)
+    // 'todasAreas' terá os nomes quebrados
+    const todasAreas = [...new Set([
+        ...Object.keys(metasMap),       // 1. Áreas que têm meta
+        ...Object.keys(realCounts),      // 2. Áreas que têm funcionários ativos
+        ...todasAreasUnicasDaQLP         // 3. (NOVO) Todas as áreas que existem
+    ])].sort();
     
     if (todasAreas.length === 0) {
         reportTableBody.innerHTML = '<tr><td colspan="3">Nenhum dado de área encontrado.</td></tr>';
@@ -687,6 +704,7 @@ async function carregarRelatorioMetas() {
         reportTableBody.innerHTML += linhaHTML;
     });
 }
+// =======================================================
 
 
 // ======== 8. NOVA FUNÇÃO DE GRÁFICO ========
@@ -725,7 +743,21 @@ async function carregarGraficoMetas() {
     }, {});
 
     // Passo 2: Preparar os dados para o gráfico
-    const todasAreas = [...new Set([...Object.keys(metasMap), ...Object.keys(realCounts)])].sort();
+    // ======== MUDANÇA AQUI TAMBÉM ========
+    // Garante que o gráfico puxe todas as áreas, assim como a tabela
+    const todasAreasUnicasDaQLP = qlpData.reduce((acc, { ATIVIDADE }) => {
+        if (ATIVIDADE) {
+            acc.add(ATIVIDADE);
+        }
+        return acc;
+    }, new Set());
+
+    const todasAreas = [...new Set([
+        ...Object.keys(metasMap),
+        ...Object.keys(realCounts),
+        ...todasAreasUnicasDaQLP
+    ])].sort();
+    // =======================================
     
     const labels = [];
     const metaData = [];
