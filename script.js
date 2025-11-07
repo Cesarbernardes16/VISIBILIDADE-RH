@@ -6,15 +6,15 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ======== FUNÇÃO DE CORREÇÃO (VERSÃO 7 - Focada no '') ========
+// ======== FUNÇÃO DE CORREÇÃO (VERSÃO 9 - GATILHO CORRIGIDO + NOVAS REGRAS) ========
 function corrigirStringQuebrada(texto) {
     if (typeof texto !== 'string' || !texto) {
         return texto;
     }
 
-    // O caractere '' (Replacement Character) ESTÁ no banco, como vimos na imagem.
-    // Vamos usá-lo como o gatilho principal para a correção.
-    if (texto.includes('')) {
+    // ======== CORREÇÃO CRÍTICA DO GATILHO ========
+    // Deve ser o caractere '' (Replacement Character), não ' ' (string vazia).
+    if (texto.includes('')) { 
         
         // Caso 1: DISTRIBUIÇÃO (Ex: "DISTRIBUIO URBANA")
         if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) {
@@ -33,20 +33,33 @@ function corrigirStringQuebrada(texto) {
         
         // Caso 4: Negócios (Ex: "Representante de Negcios II")
         if (texto.includes('Representante') && texto.includes('Neg')) {
-            // Esta regra é mais genérica, pode pegar o "Negcios I" também
-            if (texto.includes(' II')) {
-                return 'Representante de Negócios II';
-            }
-            if (texto.includes(' I')) {
-                return 'Representante de Negócios I';
-            }
+            if (texto.includes(' II')) { return 'Representante de Negócios II'; }
+            if (texto.includes(' I')) { return 'Representante de Negócios I'; }
             return 'Representante de Negócios'; // Padrão
         }
 
-        // Caso 5: Turno (da primeira imagem, Ex: "3 TURNO")
+        // Caso 5: Turno (Ex: "3 TURNO")
         if (texto.includes('3') && texto.includes('TURNO')) {
             return '3º TURNO';
         }
+
+        // ======== NOVAS REGRAS (DA ÚLTIMA IMAGEM) ========
+        // Caso 6: Armazém (Ex: "Ajudante De Armazm")
+        if (texto.includes('Armaz') && texto.includes('m')) {
+            if (texto.includes('Ajudante')) {
+                return 'Ajudante De Armazém';
+            }
+            return 'Armazém'; // Padrão
+        }
+
+        // Caso 7: Caminhão (Ex: "Motorista Caminho")
+        if (texto.includes('Caminh') && texto.includes('o')) {
+            if (texto.includes('Motorista')) {
+                return 'Motorista Caminhão';
+            }
+            return 'Caminhão'; // Padrão
+        }
+        // =================================================
 
         // Se tiver '' mas não for um caso conhecido, retorna o original (com o erro)
         return texto;
@@ -54,6 +67,86 @@ function corrigirStringQuebrada(texto) {
     
     // Se não houver '', o texto está limpo.
     return texto;
+}
+// ================================================================
+
+// ======== FUNÇÃO PARA FORMATAR SALÁRIO ========
+function formatarSalario(valor) {
+    if (!valor) {
+        return '';
+    }
+    const numeroLimpo = String(valor)
+        .replace("R$", "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+        
+    const numero = parseFloat(numeroLimpo);
+    if (isNaN(numero)) {
+        return valor;
+    }
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(numero);
+}
+// =======================================================
+
+// ======== FUNÇÃO PARA FORMATAR CPF (CORRIGIDA) ========
+function formatarCPF(cpf) {
+    // Se o valor for nulo ou indefinido, retorna vazio.
+    if (!cpf) {
+        return '';
+    }
+
+    // ======== A CORREÇÃO ESTÁ AQUI ========
+    // Converte o CPF (que pode ser um número) para string primeiro
+    const cpfString = String(cpf);
+    // ======================================
+    
+    // Remove qualquer caractere que não seja dígito
+    const cpfLimpo = cpfString.replace(/[^\d]/g, '');
+    
+    // Verifica se tem 11 dígitos
+    if (cpfLimpo.length !== 11) {
+        return cpfString; // Retorna a string original se não for um CPF válido
+    }
+
+    // Aplica a máscara XXX.XXX.XXX-XX
+    return `${cpfLimpo.slice(0, 3)}.${cpfLimpo.slice(3, 6)}.${cpfLimpo.slice(6, 9)}-${cpfLimpo.slice(9, 11)}`;
+}
+// =======================================================
+
+// ======== FUNÇÃO PARA FORMATAR TEMPO DE EMPRESA (em dias) ========
+function formatarTempoDeEmpresa(dias) {
+    if (!dias) {
+        return '';
+    }
+    const numDias = parseInt(dias, 10);
+    if (isNaN(numDias) || numDias <= 0) {
+        return ''; // Retorna vazio se não for um número válido
+    }
+
+    // Usamos 365.25 para uma média mais precisa (anos bissextos)
+    const anos = Math.floor(numDias / 365.25);
+    // 30.44 é a média de dias em um mês (365.25 / 12)
+    const meses = Math.floor((numDias % 365.25) / 30.44); 
+
+    let resultado = '';
+    if (anos > 0) {
+        resultado += `${anos} ${anos === 1 ? 'ano' : 'anos'}`;
+    }
+    if (meses > 0) {
+        if (anos > 0) {
+            resultado += ' e ';
+        }
+        resultado += `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+    }
+    // Caso tenha menos de 1 mês (ex: 15 dias)
+    if (anos === 0 && meses === 0 && numDias > 0) {
+        return "Menos de 1 mês";
+    }
+    
+    return resultado;
 }
 // ================================================================
 
@@ -339,17 +432,22 @@ function criarCardColaborador(colaborador) {
     // MODIFICAÇÃO: Aplicando a função de correção nos campos
     const status = colaborador.SITUACAO || 'Indefinido'; 
     const nome = corrigirStringQuebrada(colaborador.NOME) || '';
-    const cpf = colaborador.CPF || '';
-    const funcao = corrigirStringQuebrada(colaborador.FUNCAO) || '';
+    
+    // ======== FORMATAÇÃO DE CPF APLICADA ========
+    const cpf = formatarCPF(colaborador.CPF); // Removido '|| ""' pois a função já trata isso
+    
+    const funcao = corrigirStringQuebrada(colaborador['CARGO ATUAL']) || ''; 
     const area = corrigirStringQuebrada(colaborador.ATIVIDADE) || '';
-    const tempoEmpresa = colaborador.TEMPO_DE_EMPRESA || '';
+    
+    // ======== FORMATAÇÃO DE TEMPO DE EMPRESA APLICADA ========
+    const tempoEmpresa = formatarTempoDeEmpresa(colaborador['TEMPO DE EMPRESA']); 
+    
     const escolaridade = corrigirStringQuebrada(colaborador.Escolaridade) || ''; 
-    const salario = colaborador.SALARIO || ''; 
+    const salario = formatarSalario(colaborador.SALARIO); 
     const pcd = colaborador.PCD || 'NÃO'; 
     const telefone = colaborador.CONTATO || ''; 
-    const telEmergencia = colaborador.CONT_FAMILIAR || '';
+    const telEmergencia = colaborador['CONT FAMILIAR'] || ''; 
     
-    // Aplicando a correção no turno
     const turno = corrigirStringQuebrada(colaborador.TURNO) || '';
     const lider = corrigirStringQuebrada(colaborador.LIDER) || '';
     const dataPromocao = colaborador.DATA_PROMOCAO || '';

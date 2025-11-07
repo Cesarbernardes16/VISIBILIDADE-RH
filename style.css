@@ -520,3 +520,12 @@ body {
     width: 100% !important;
     max-height: 450px;
 }
+/* ======== CORREÇÃO PARA O BADGE PCD ======== */
+
+/* Isto remove a largura de 60% (flex-basis) 
+  especificamente do span que tem a classe .pcd-badge
+*/
+.card-body p span.pcd-badge {
+    flex-basis: auto;  /* Faz o span ter o tamanho do seu conteúdo */
+    text-align: center; /* Centraliza o "NAO" ou "SIM" dentro do badge */
+}
