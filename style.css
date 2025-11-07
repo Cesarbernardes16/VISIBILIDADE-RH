@@ -493,3 +493,30 @@ body {
     text-align: center;
     width: 100px;
 }
+/* ======== 5. ESTILOS DA PÁGINA DE GRÁFICOS ======== */
+
+.chart-container {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.chart-container h2 {
+    margin-top: 0;
+    text-align: center;
+}
+.chart-container p {
+    text-align: center;
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 25px;
+}
+
+/* Define um tamanho para o canvas do gráfico */
+#grafico-metas-qlp {
+    width: 100% !important;
+    max-height: 450px;
+}

@@ -6,6 +6,9 @@
     <title>Visão RH - Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    
 </head>
 <body class="dashboard-body">
 
@@ -26,6 +29,12 @@
                 <span class="material-icons-outlined">settings</span>
                 Painel de Gestão
             </a>
+            
+            <a href="#" id="nav-graficos" class="nav-link">
+                <span class="material-icons-outlined">show_chart</span>
+                Gráficos
+            </a>
+            
         </nav>
         <div class="sidebar-footer">
             <a href="#" id="nav-sair" class="nav-link">
@@ -107,6 +116,18 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div id="graficos-content" class="content-section" style="display: none;">
+            <header>
+                <h1>Gráficos - Metas QLP</h1>
+            </header>
+            
+            <div class="chart-container">
+                <h2>Meta vs Real vs Gap (Faltantes)</h2>
+                <p>O "Gap" mostra quantos colaboradores faltam para atingir a meta (Meta - Real).</p>
+                <canvas id="grafico-metas-qlp"></canvas>
             </div>
         </div>
 

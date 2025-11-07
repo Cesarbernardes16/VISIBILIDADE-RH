@@ -62,6 +62,9 @@ function corrigirStringQuebrada(texto) {
 let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton;
 let metaForm, metaAreaSelect, metaValorInput, metaSubmitButton, metaSuccessMessage, reportTableBody;
 
+// ======== NOVO: Variável global para o Gráfico ========
+let metaChart = null; 
+
 // Constantes de Paginação
 const ITENS_POR_PAGINA = 30;
 let currentPage = 0;
@@ -125,22 +128,40 @@ function setupDashboard() {
     // ======== MODIFICAÇÃO: Restaura a aba ativa ou define o padrão ========
     const activeTab = sessionStorage.getItem('activeTab');
 
-    if (activeTab === 'gestao') {
-        // Captura os elementos de navegação e conteúdo
-        const navVisaoGeral = document.getElementById('nav-visao-geral');
-        const navPainelGestao = document.getElementById('nav-painel-gestao');
-        const contentVisaoGeral = document.getElementById('visao-geral-content');
-        const contentGestao = document.getElementById('gestao-content');
+    // Captura os elementos de navegação e conteúdo
+    const navVisaoGeral = document.getElementById('nav-visao-geral');
+    const navPainelGestao = document.getElementById('nav-painel-gestao');
+    const navGraficos = document.getElementById('nav-graficos'); // NOVO
+    const contentVisaoGeral = document.getElementById('visao-geral-content');
+    const contentGestao = document.getElementById('gestao-content');
+    const contentGraficos = document.getElementById('graficos-content'); // NOVO
 
-        // Ativa a aba de Gestão
+    if (activeTab === 'gestao') {
         if (contentVisaoGeral) contentVisaoGeral.style.display = 'none';
+        if (contentGraficos) contentGraficos.style.display = 'none'; // NOVO
         if (contentGestao) contentGestao.style.display = 'block';
+        
         if (navVisaoGeral) navVisaoGeral.classList.remove('active');
+        if (navGraficos) navGraficos.classList.remove('active'); // NOVO
         if (navPainelGestao) navPainelGestao.classList.add('active');
         
         carregarRelatorioMetas(); // Carrega o relatório
+    
+    } else if (activeTab === 'graficos') { // NOVO
+        if (contentVisaoGeral) contentVisaoGeral.style.display = 'none';
+        if (contentGestao) contentGestao.style.display = 'none';
+        if (contentGraficos) contentGraficos.style.display = 'block';
+        
+        if (navVisaoGeral) navVisaoGeral.classList.remove('active');
+        if (navPainelGestao) navPainelGestao.classList.remove('active');
+        if (navGraficos) navGraficos.classList.add('active');
+
+        carregarGraficoMetas(); // Carrega o gráfico
+
     } else {
         // Padrão: Carrega a Visão Geral
+        if (contentGestao) contentGestao.style.display = 'none';
+        if (contentGraficos) contentGraficos.style.display = 'none';
         carregarColaboradores(); // Carrega os cards
     }
     // ================== FIM DA MODIFICAÇÃO ==================
@@ -148,23 +169,27 @@ function setupDashboard() {
     console.log("DEBUG: 4. Carga inicial de dados disparada."); 
 }
 
-// 4. Função de Navegação da Sidebar
+// 4. Função de Navegação da Sidebar (ATUALIZADA)
 function setupNavigation() {
     const navVisaoGeral = document.getElementById('nav-visao-geral');
     const navPainelGestao = document.getElementById('nav-painel-gestao');
+    const navGraficos = document.getElementById('nav-graficos'); // NOVO
     const navSair = document.getElementById('nav-sair');
     
     const contentVisaoGeral = document.getElementById('visao-geral-content');
     const contentGestao = document.getElementById('gestao-content');
+    const contentGraficos = document.getElementById('graficos-content'); // NOVO
 
     if (navVisaoGeral) {
         navVisaoGeral.addEventListener('click', (e) => {
             e.preventDefault();
             contentVisaoGeral.style.display = 'block';
             contentGestao.style.display = 'none';
+            contentGraficos.style.display = 'none'; // NOVO
             
             navVisaoGeral.classList.add('active');
             navPainelGestao.classList.remove('active');
+            navGraficos.classList.remove('active'); // NOVO
             
             sessionStorage.setItem('activeTab', 'visao-geral'); 
         });
@@ -175,14 +200,35 @@ function setupNavigation() {
             e.preventDefault();
             contentVisaoGeral.style.display = 'none';
             contentGestao.style.display = 'block';
+            contentGraficos.style.display = 'none'; // NOVO
 
             navVisaoGeral.classList.remove('active');
             navPainelGestao.classList.add('active');
+            navGraficos.classList.remove('active'); // NOVO
             
             // Carrega o relatório ao clicar na aba
             carregarRelatorioMetas();
             
             sessionStorage.setItem('activeTab', 'gestao'); 
+        });
+    }
+
+    // ======== NOVO: Event listener para Gráficos ========
+    if (navGraficos) {
+        navGraficos.addEventListener('click', (e) => {
+            e.preventDefault();
+            contentVisaoGeral.style.display = 'none';
+            contentGestao.style.display = 'none';
+            contentGraficos.style.display = 'block';
+
+            navVisaoGeral.classList.remove('active');
+            navPainelGestao.classList.remove('active');
+            navGraficos.classList.add('active');
+            
+            // Carrega o gráfico ao clicar na aba
+            carregarGraficoMetas();
+            
+            sessionStorage.setItem('activeTab', 'graficos'); 
         });
     }
 
@@ -545,7 +591,131 @@ async function carregarRelatorioMetas() {
 }
 
 
-// ======== 8. Auth Guard (Proteção da Página com sessionStorage) ========
+// ======== 8. NOVA FUNÇÃO DE GRÁFICO ========
+async function carregarGraficoMetas() {
+    console.log("DEBUG: 7. carregarGraficoMetas() chamado...");
+    
+    // Passo 1: Buscar os dados (igual ao carregarRelatorioMetas)
+    const { data: metasData, error: metasError } = await supabaseClient
+        .from(NOME_TABELA_METAS)
+        .select('area, meta');
+    
+    if (metasError) {
+        console.error('Erro ao buscar metas para gráfico:', metasError);
+        return;
+    }
+    const metasMap = metasData.reduce((acc, item) => {
+        acc[item.area] = item.meta;
+        return acc;
+    }, {});
+
+    const { data: qlpData, error: qlpError } = await supabaseClient
+        .from(NOME_TABELA_QLP)
+        .select('ATIVIDADE, SITUACAO'); 
+    
+    if (qlpError) {
+        console.error('Erro ao buscar QLP para gráfico:', qlpError);
+        return;
+    }
+    
+    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
+    const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
+        if (ATIVIDADE) {
+            acc[ATIVIDADE] = (acc[ATIVIDADE] || 0) + 1;
+        }
+        return acc;
+    }, {});
+
+    // Passo 2: Preparar os dados para o gráfico
+    const todasAreas = [...new Set([...Object.keys(metasMap), ...Object.keys(realCounts)])].sort();
+    
+    const labels = [];
+    const metaData = [];
+    const realData = [];
+    const gapData = []; // O "Gap" que você pediu
+
+    todasAreas.forEach(area => {
+        const meta = metasMap[area] || 0;
+        const real = realCounts[area] || 0;
+        
+        // Calcula o Gap: quantos faltam (Meta - Real)
+        // Usamos Math.max(0, ...) para que o Gap nunca seja negativo
+        // Se o Real for 10 e a Meta 8, o Gap de "faltantes" é 0, não -2.
+        const gap = Math.max(0, meta - real); 
+
+        labels.push(corrigirStringQuebrada(area));
+        metaData.push(meta);
+        realData.push(real);
+        gapData.push(gap);
+    });
+
+    // Passo 3: Desenhar o Gráfico
+    const ctx = document.getElementById('grafico-metas-qlp').getContext('2d');
+    
+    // Destrói o gráfico antigo, se existir, para evitar sobreposição
+    if (metaChart) {
+        metaChart.destroy();
+    }
+
+    metaChart = new Chart(ctx, {
+        type: 'bar', // Tipo de gráfico: Barras
+        data: {
+            labels: labels, // Nomes das Áreas no eixo X
+            datasets: [
+                {
+                    label: 'Meta',
+                    data: metaData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)', // Azul
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Real',
+                    data: realData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)', // Verde
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Gap (Faltantes)',
+                    data: gapData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)', // Vermelho
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top', // Legenda no topo
+                },
+                title: {
+                    display: false, // Já temos um título no HTML
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true, // Eixo Y começa no zero
+                    title: {
+                        display: true,
+                        text: 'Nº de Colaboradores'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Áreas'
+                    }
+                }
+            }
+        }
+    });
+}
+
+
+// ======== 9. Auth Guard (Proteção da Página com sessionStorage) ========
 (function() {
     console.log("DEBUG: Auth Guard INICIADO."); 
     if (sessionStorage.getItem('usuarioLogado') !== 'true') {
