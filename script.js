@@ -27,7 +27,6 @@ function setupDashboard() {
     searchBar = document.getElementById('search-bar');
     filterStatus = document.getElementById('filter-status');
     filterArea = document.getElementById('filter-area');
-    // filterCargo = document.getElementById('filter-cargo'); // REMOVIDO
     filterLider = document.getElementById('filter-lider');
     loadMoreButton = document.getElementById('load-more-button');
     
@@ -51,9 +50,6 @@ function setupDashboard() {
     if (filterArea) {
         filterArea.addEventListener('change', carregarColaboradores);
     }
-    // if (filterCargo) { // REMOVIDO
-    //     filterCargo.addEventListener('change', carregarColaboradores);
-    // }
     if (filterLider) {
         filterLider.addEventListener('change', carregarColaboradores);
     }
@@ -124,11 +120,14 @@ function setupNavigation() {
 
 // 5. Funções da "Visão Geral" (Cards de Colaboradores)
 function buildQuery() {
-    const searchTerm = searchBar.value.trim();
-    const status = filterStatus.value;
-    const area = filterArea.value;
-    // const cargo = filterCargo.value; // REMOVIDO (ESTA ERA A LINHA 130)
-    const lider = filterLider.value;
+    // ======== CORREÇÃO CRÍTICA (ANTI-FALHA) ========
+    // Adicionamos verificações '?' para evitar o crash se o elemento for 'null'
+    const searchTerm = searchBar ? searchBar.value.trim() : '';
+    const status = filterStatus ? filterStatus.value : '';
+    const area = filterArea ? filterArea.value : '';
+    const lider = filterLider ? filterLider.value : '';
+    // ===============================================
+
     let query = supabaseClient.from(NOME_TABELA_QLP).select('*');
     if (searchTerm) {
         query = query.ilike('NOME', `%${searchTerm}%`);
@@ -145,9 +144,6 @@ function buildQuery() {
     if (area) {
         query = query.eq('ATIVIDADE', area);
     }
-    // if (cargo) { // REMOVIDO
-    //     query = query.eq('CARGO_ATUAL', cargo);
-    // }
     if (lider) {
         query = query.eq('LIDER', lider);
     }
@@ -281,9 +277,9 @@ function criarCardColaborador(colaborador) {
 // 6. Funções de População de Filtros (Visão Geral)
 async function popularFiltrosDinamicos() {
     // Verificação de segurança
-    if (!filterArea || !filterLider) { // filterCargo REMOVIDO
-        console.warn("DEBUG: Dropdowns de filtro não encontrados.");
-        return;
+    if (!filterArea || !filterLider) { 
+        console.warn("DEBUG: Dropdowns de filtro não encontrados (ou ainda não carregados).");
+        return; // Não é um erro fatal, apenas não popula os filtros
     }
     
     // Corrigido para .select('*') para evitar o erro 400
@@ -296,15 +292,11 @@ async function popularFiltrosDinamicos() {
         return;
     }
     const areas = [...new Set(data.map(item => item.ATIVIDADE).filter(Boolean))].sort();
-    // const cargos = [...new Set(data.map(item => item.CARGO_ATUAL).filter(Boolean))].sort(); // REMOVIDO
     const lideres = [...new Set(data.map(item => item.LIDER).filter(Boolean))].sort();
     
     areas.forEach(area => {
         filterArea.innerHTML += `<option value="${area}">${area}</option>`;
     });
-    // cargos.forEach(cargo => { // REMOVIDO
-    //     filterCargo.innerHTML += `<option value="${cargo}">${cargo}</option>`;
-    // });
     
     lideres.forEach(lider => {
         filterLider.innerHTML += `<option value="${lider}">${lider}</option>`;
