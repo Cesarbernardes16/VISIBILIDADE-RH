@@ -277,16 +277,16 @@ body {
 
 /* O card do colaborador */
 .employee-card {
-    /* ======== A CORREÇÃO ESTÁ AQUI ======== */
-    /* Removemos flex-grow e flex-shrink para que o card NÃO mude de tamanho */
-    /* flex-grow: 1; */ 
-    /* flex-shrink: 1; */ 
+    flex-grow: 1;
+    flex-shrink: 1;
     
-    /* Definimos uma LARGURA FIXA que bate com a sua imagem-objetivo (image_93d725.png) */
-    /* Isso garante que há espaço para os 240px do rótulo + o valor */
-    width: 450px;
-    
-    /* Removemos flex-basis, min-width e max-width que estavam causando conflito */
+    /* ======== MUDANÇA 1: Ajuste de Largura ======== */
+    /* Define uma base de 390px (como na sua imagem "boa") */
+    flex-basis: 390px; 
+    /* Permite crescer se houver espaço */
+    max-width: 420px;
+    /* IMPEDE que o card encolha a ponto de quebrar o layout interno */
+    min-width: 390px; 
     
     background-color: #ffffff;
     border: 1px solid #ddd;
@@ -346,8 +346,11 @@ body {
     font-size: 0.9em;
     color: #555;
     display: flex;
-    /* justify-content: space-between; */ /* Removido para o alinhamento à esquerda funcionar */
+    /* Remove o space-between para o alinhamento à esquerda funcionar */
+    /* justify-content: space-between; */ 
 }
+
+/* ======== MUDANÇA 2: Ajuste das colunas ======== */
 
 /* Esta é a "coluna" dos rótulos (NOME:, CPF:, etc.) */
 .card-body p strong {
@@ -366,12 +369,13 @@ body {
     text-align: left; /* Alinha o valor à esquerda */
     color: #333;
     
-    /* Permite que valores longos (como o nome do líder) quebrem a linha */
+    /* Permite que valores longos quebrem a linha */
     word-break: break-word;  
 
     flex-grow: 1; /* Faz o <span> (valor) crescer e ocupar o espaço restante */
     min-width: 0; /* Ajuda o flexbox a calcular a quebra de linha */
 }
+/* ======== FIM DA CORREÇÃO DE ALINHAMENTO ======== */
 
 
 /* Badge PCD */
@@ -389,7 +393,8 @@ body {
     flex-grow: 0;      /* Impede que o badge cresça */
     text-align: center; 
     
-    /* Força o badge para a direita */
+    /* O justify-content: space-between foi removido do <p> */
+    /* Precisamos forçar o badge para a direita */
     margin-left: auto;
 }
 
@@ -561,6 +566,8 @@ body {
     flex-basis: auto;  /* Faz o span ter o tamanho do seu conteúdo */
     text-align: center; /* Centraliza o "NAO" ou "SIM" dentro do badge */
 }
+
+
 /* --- CSS ATUALIZADO PARA 3 TABELAS DE RELATÓRIO --- */
 .report-container {
     margin-bottom: 30px; /* Adiciona espaço entre os relatórios */
@@ -601,4 +608,41 @@ body {
     text-align: center;
     width: 100px;
     font-weight: normal; /* Garante que os números não fiquem em negrito */
+}
+
+/* ======== NOVOS ESTILOS PARA O CARD DE COTA (PINK) ======== */
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px; /* Espaço entre o header e o <p> */
+}
+
+/* Remove a margem padrão do h2 quando ele está no header */
+.report-header h2 {
+    margin: 0;
+    border-bottom: none; /* Remove a borda de baixo que estava no h2 */
+    padding-bottom: 0;
+}
+
+/* O card da Cota (o "pink") */
+.quota-info {
+    text-align: right;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 5px 10px;
+    min-width: 150px; /* Largura mínima */
+}
+
+.quota-info span {
+    font-size: 0.8em;
+    color: #555;
+    display: block;
+}
+
+.quota-info strong {
+    font-size: 1.8em; /* "tamanho da letra" grande */
+    color: #192A56; /* Cor principal (azul escuro) */
+    display: block;
 }

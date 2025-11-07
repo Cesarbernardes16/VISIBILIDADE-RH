@@ -607,8 +607,7 @@ async function handleMetaSubmit(e) {
     e.preventDefault();
     const areaSelecionada = metaAreaSelect.value; // Isto vai pegar o valor original (quebrado), o que é CORRETO
     
-    // Pega todos os valores (ou 0 se estiver vazio)
-    // ATUALIZAÇÃO: Se o campo estiver vazio, salva NULL no banco, e não 0
+    // Pega todos os valores (ou null se estiver vazio)
     const metaValor = metaValorInput.value ? parseInt(metaValorInput.value) : null;
     const metaPCDValor = metaPCDInput.value ? parseInt(metaPCDInput.value) : null;
     const metaJovemValor = metaJovemInput.value ? parseInt(metaJovemInput.value) : null;
@@ -648,7 +647,7 @@ async function handleMetaSubmit(e) {
 }
 
 
-// ======== 8. FUNÇÃO MESTRA DE BUSCA DE DADOS ========
+// ======== 8. FUNÇÃO MESTRA DE BUSCA DE DADOS (ATUALIZADA) ========
 // Esta função centraliza a busca e processamento de dados
 async function fetchProcessedData() {
     // Passo 1: Buscar as Metas
@@ -724,13 +723,17 @@ async function fetchProcessedData() {
         }
     });
     
-    return { todasAreas, metasMap, realMap, error: null };
+    // ======== MUDANÇA: Calcular o Total de Ativos ========
+    const totalAtivos = ativos.length;
+    // ===================================================
+    
+    return { todasAreas, metasMap, realMap, totalAtivos, error: null };
 }
 
 
 // ======== 9. FUNÇÕES DO PAINEL DE GESTÃO E GRÁFICOS (ATUALIZADAS) ========
 
-// ======== ATUALIZADO: carregarRelatorioMetas (agora preenche 3 tabelas) ========
+// ======== ATUALIZADO: carregarRelatorioMetas (agora preenche 3 tabelas e as cotas) ========
 async function carregarRelatorioMetas() {
     // Verifica se os 3 tbodys existem
     if (!reportTableBodyQLP || !reportTableBodyPCD || !reportTableBodyJovem) {
@@ -742,7 +745,8 @@ async function carregarRelatorioMetas() {
     reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
     reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
     
-    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    // Busca os dados, incluindo o novo totalAtivos
+    const { todasAreas, metasMap, realMap, totalAtivos, error } = await fetchProcessedData();
 
     if (error) {
         reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
@@ -750,6 +754,38 @@ async function carregarRelatorioMetas() {
         reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
         return;
     }
+
+    // ======== MUDANÇA: Calcular e Exibir Cotas ========
+    let metaPCDCalculada = 0;
+    if (totalAtivos >= 100 && totalAtivos <= 200) {
+        metaPCDCalculada = totalAtivos * 0.02;
+    } else if (totalAtivos >= 201 && totalAtivos <= 500) {
+        metaPCDCalculada = totalAtivos * 0.03;
+    } else if (totalAtivos >= 501 && totalAtivos <= 1000) {
+        metaPCDCalculada = totalAtivos * 0.04;
+    } else if (totalAtivos > 1000) {
+        metaPCDCalculada = totalAtivos * 0.05;
+    }
+    
+    // Arredonda para cima (cota legal)
+    metaPCDCalculada = Math.ceil(metaPCDCalculada);
+
+    // Cota Jovem: 5% do QLP Total (total de ativos)
+    let metaJovemCalculada = totalAtivos * 0.05;
+    // Arredonda para cima (cota legal)
+    metaJovemCalculada = Math.ceil(metaJovemCalculada);
+
+    // Atualiza os elementos HTML
+    const quotaPCDElement = document.getElementById('quota-pcd-value');
+    const quotaJovemElement = document.getElementById('quota-jovem-value');
+
+    if (quotaPCDElement) {
+        quotaPCDElement.textContent = metaPCDCalculada;
+    }
+    if (quotaJovemElement) {
+        quotaJovemElement.textContent = metaJovemCalculada;
+    }
+    // =================================================
     
     if (todasAreas.length === 0) {
         reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
@@ -814,7 +850,7 @@ async function carregarRelatorioMetas() {
     reportTableBodyJovem.innerHTML = jovemHTML || `<tr><td colspan="3">Nenhuma meta ou Jovem Aprendiz encontrado.</td></tr>`;
 }
 
-// ------ FUNÇÕES DE GRÁFICO SEPARADAS ------
+// ------ FUNÇÕES DE GRÁFICO SEPARADAS (AGORA COM TOTAL E NÚMEROS) ------
 
 async function carregarGraficoQLP() {
     console.log("DEBUG: 7. carregarGraficoQLP() chamado...");
@@ -837,12 +873,27 @@ async function carregarGraficoQLP() {
         gapData.push(gap);
     });
 
+    // ======== MUDANÇA: Adicionar "Total" ========
+    if (labels.length > 0) {
+        const totalMeta = metaData.reduce((acc, val) => acc + val, 0);
+        const totalReal = realData.reduce((acc, val) => acc + val, 0);
+        const totalGap = Math.max(0, totalMeta - totalReal);
+
+        labels.push('TOTAL');
+        metaData.push(totalMeta);
+        realData.push(totalReal);
+        gapData.push(totalGap);
+    }
+    // ==========================================
+
     const ctx = document.getElementById('grafico-metas-qlp').getContext('2d');
     if (metaChartQLP) {
         metaChartQLP.destroy();
     }
     metaChartQLP = new Chart(ctx, {
         type: 'bar',
+        // Registra o plugin de labels para este gráfico
+        plugins: [ChartDataLabels], 
         data: {
             labels: labels,
             datasets: [
@@ -853,7 +904,20 @@ async function carregarGraficoQLP() {
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
+            plugins: { 
+                legend: { position: 'top' },
+                // ======== MUDANÇA: Configuração dos Números (Labels) ========
+                datalabels: {
+                    anchor: 'end', // Posição (topo da barra)
+                    align: 'top',
+                    color: '#444',
+                    font: { weight: 'bold' },
+                    formatter: (value) => {
+                        return value > 0 ? value : ''; // Só mostra se for maior que 0
+                    }
+                }
+                // ========================================================
+            },
             scales: {
                 y: { beginAtZero: true, title: { display: true, text: 'Nº de Colaboradores' } },
                 x: { title: { display: true, text: 'Áreas' } }
@@ -886,12 +950,26 @@ async function carregarGraficoPCD() {
         }
     });
 
+    // ======== MUDANÇA: Adicionar "Total" ========
+    if (labels.length > 0) {
+        const totalMeta = metaData.reduce((acc, val) => acc + val, 0);
+        const totalReal = realData.reduce((acc, val) => acc + val, 0);
+        const totalGap = Math.max(0, totalMeta - totalReal);
+
+        labels.push('TOTAL');
+        metaData.push(totalMeta);
+        realData.push(totalReal);
+        gapData.push(totalGap);
+    }
+    // ==========================================
+
     const ctx = document.getElementById('grafico-metas-pcd').getContext('2d');
     if (metaChartPCD) {
         metaChartPCD.destroy();
     }
     metaChartPCD = new Chart(ctx, {
         type: 'bar',
+        plugins: [ChartDataLabels], // Registra o plugin de labels
         data: {
             labels: labels,
             datasets: [
@@ -902,9 +980,29 @@ async function carregarGraficoPCD() {
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
+            plugins: { 
+                legend: { position: 'top' },
+                // ======== MUDANÇA: Configuração dos Números (Labels) ========
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    color: '#444',
+                    font: { weight: 'bold' },
+                    formatter: (value) => {
+                        return value > 0 ? value : ''; // Só mostra se for maior que 0
+                    }
+                }
+                // ========================================================
+            },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Nº de Colaboradores PCD' } },
+                y: { 
+                    beginAtZero: true, 
+                    title: { display: true, text: 'Nº de Colaboradores PCD' },
+                    // Garante que o eixo Y mostre números inteiros (ex: 1, 2, 3)
+                    ticks: {
+                        stepSize: 1 
+                    }
+                },
                 x: { title: { display: true, text: 'Áreas' } }
             }
         }
@@ -935,12 +1033,26 @@ async function carregarGraficoJovemAprendiz() {
         }
     });
 
+    // ======== MUDANÇA: Adicionar "Total" ========
+    if (labels.length > 0) {
+        const totalMeta = metaData.reduce((acc, val) => acc + val, 0);
+        const totalReal = realData.reduce((acc, val) => acc + val, 0);
+        const totalGap = Math.max(0, totalMeta - totalReal);
+
+        labels.push('TOTAL');
+        metaData.push(totalMeta);
+        realData.push(totalReal);
+        gapData.push(totalGap);
+    }
+    // ==========================================
+
     const ctx = document.getElementById('grafico-metas-jovem').getContext('2d');
     if (metaChartJovem) {
         metaChartJovem.destroy();
     }
     metaChartJovem = new Chart(ctx, {
         type: 'bar',
+        plugins: [ChartDataLabels], // Registra o plugin de labels
         data: {
             labels: labels,
             datasets: [
@@ -951,9 +1063,29 @@ async function carregarGraficoJovemAprendiz() {
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
+            plugins: { 
+                legend: { position: 'top' },
+                // ======== MUDANÇA: Configuração dos Números (Labels) ========
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    color: '#444',
+                    font: { weight: 'bold' },
+                    formatter: (value) => {
+                        return value > 0 ? value : ''; // Só mostra se for maior que 0
+                    }
+                }
+                // ========================================================
+            },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Nº de Jovens Aprendizes' } },
+                y: { 
+                    beginAtZero: true, 
+                    title: { display: true, text: 'Nº de Jovens Aprendizes' },
+                    // Garante que o eixo Y mostre números inteiros (ex: 1, 2, 3)
+                    ticks: {
+                        stepSize: 1 
+                    }
+                },
                 x: { title: { display: true, text: 'Áreas' } }
             }
         }
