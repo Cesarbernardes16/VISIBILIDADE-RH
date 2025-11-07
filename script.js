@@ -6,39 +6,49 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ======== NOVA FUNÇÃO DE CORREÇÃO (VERSÃO 4 - MAIS FORTE) ========
+// ======== FUNÇÃO DE CORREÇÃO (VERSÃO 7 - Focada no '') ========
 function corrigirStringQuebrada(texto) {
     if (typeof texto !== 'string' || !texto) {
         return texto;
     }
 
-    // O problema é o caractere '' (Replacement Character).
-    // Se o texto contiver este caractere, tentamos adivinhar qual era a palavra.
+    // O caractere '' (Replacement Character) ESTÁ no banco, como vimos na imagem.
+    // Vamos usá-lo como o gatilho principal para a correção.
     if (texto.includes('')) {
         
-        // Caso 1: DISTRIBUIÇÃO
-        // (Ex: "DISTRIBUIO URBANA" ou "Ajudante Distribuico")
-        if (texto.includes('DISTRIBUI') || texto.includes('Distribu')) {
-            if (texto.includes('URBANA')) {
-                return 'DISTRIBUIÇÃO URBANA';
-            }
-            if (texto.includes('Ajudante')) {
-                return 'Ajudante Distribuição';
-            }
-            return 'DISTRIBUIÇÃO'; // Padrão
+        // Caso 1: DISTRIBUIÇÃO (Ex: "DISTRIBUIO URBANA")
+        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) {
+            return 'DISTRIBUIÇÃO URBANA';
         }
         
-        // Caso 2: Operações (Ex: "Analista Operaes")
-        if (texto.includes('Opera')) {
+        // Caso 2: Ajudante Distribuição (Ex: "Ajudante Distribuio")
+        if (texto.includes('Ajudante') && texto.includes('Distribui')) {
+            return 'Ajudante Distribuição';
+        }
+        
+        // Caso 3: Operações (Ex: "Analista Operaes")
+        if (texto.includes('Analista') && texto.includes('Opera')) {
             return 'Analista Operações';
         }
         
-        // Caso 3: Negócios (Ex: "Representante de Negcios II")
-        if (texto.includes('Neg')) {
-            return 'Representante de Negócios II';
+        // Caso 4: Negócios (Ex: "Representante de Negcios II")
+        if (texto.includes('Representante') && texto.includes('Neg')) {
+            // Esta regra é mais genérica, pode pegar o "Negcios I" também
+            if (texto.includes(' II')) {
+                return 'Representante de Negócios II';
+            }
+            if (texto.includes(' I')) {
+                return 'Representante de Negócios I';
+            }
+            return 'Representante de Negócios'; // Padrão
         }
 
-        // Se encontrar '' mas não souber corrigir, retorna o original (melhor do que quebrar)
+        // Caso 5: Turno (da primeira imagem, Ex: "3 TURNO")
+        if (texto.includes('3') && texto.includes('TURNO')) {
+            return '3º TURNO';
+        }
+
+        // Se tiver '' mas não for um caso conhecido, retorna o original (com o erro)
         return texto;
     }
     
@@ -292,7 +302,9 @@ function criarCardColaborador(colaborador) {
     const pcd = colaborador.PCD || 'NÃO'; 
     const telefone = colaborador.CONTATO || ''; 
     const telEmergencia = colaborador.CONT_FAMILIAR || '';
-    const turno = colaborador.TURNO || '';
+    
+    // Aplicando a correção no turno
+    const turno = corrigirStringQuebrada(colaborador.TURNO) || '';
     const lider = corrigirStringQuebrada(colaborador.LIDER) || '';
     const dataPromocao = colaborador.DATA_PROMOCAO || '';
     
@@ -370,7 +382,11 @@ async function popularFiltrosDinamicos() {
     });
     // Ordena pelos nomes corrigidos
     const sortedAreas = [...areasMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-    sortedAreas.forEach(([original, corrigido])]) => {
+    
+    // Limpa opções antigas (exceto a primeira)
+    filterArea.innerHTML = '<option value="">Toda Área</option>';
+    
+    sortedAreas.forEach(([original, corrigido]) => {
         // O 'value' é o original (para o filtro funcionar)
         // O texto (innerHTML) é o corrigido (para o usuário ver)
         filterArea.innerHTML += `<option value="${original}">${corrigido}</option>`;
@@ -383,6 +399,10 @@ async function popularFiltrosDinamicos() {
         }
     });
     const sortedLideres = [...lideresMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+    
+    // Limpa opções antigas (exceto a primeira)
+    filterLider.innerHTML = '<option value="">Todo Líder</option>';
+    
     sortedLideres.forEach(([original, corrigido]) => {
         filterLider.innerHTML += `<option value="${original}">${corrigido}</option>`;
     });
@@ -488,7 +508,7 @@ async function carregarRelatorioMetas() {
     }
     
     // Filtra apenas colaboradores "ATIVO" (com segurança)
-    const ativos = qlpData.filter(col => col.SITUACAO && col.STUAO.toUpperCase() === 'ATIVO');
+    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
     
     const realCounts = ativos.reduce((acc, { ATIVIDADE }) => {
         if (ATIVIDADE) {
