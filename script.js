@@ -91,27 +91,28 @@ function formatarSalario(valor) {
 }
 // =======================================================
 
-// ======== FUNÇÃO PARA FORMATAR CPF (CORRIGIDA) ========
+// ======== FUNÇÃO PARA FORMATAR CPF (CORRIGIDA - COM PAD DE 0) ========
 function formatarCPF(cpf) {
-    // Se o valor for nulo ou indefinido, retorna vazio.
+    // 1. Se o valor for nulo ou indefinido, retorna vazio.
     if (!cpf) {
         return '';
     }
 
-    // ======== A CORREÇÃO ESTÁ AQUI ========
-    // Converte o CPF (que pode ser um número) para string primeiro
+    // 2. Converte para string e limpa não-dígitos
     const cpfString = String(cpf);
-    // ======================================
-    
-    // Remove qualquer caractere que não seja dígito
-    const cpfLimpo = cpfString.replace(/[^\d]/g, '');
-    
-    // Verifica se tem 11 dígitos
-    if (cpfLimpo.length !== 11) {
-        return cpfString; // Retorna a string original se não for um CPF válido
+    let cpfLimpo = cpfString.replace(/[^\d]/g, '');
+
+    // 3. (NOVA REGRA) Se tiver 10 dígitos, adiciona o zero à esquerda.
+    if (cpfLimpo.length === 10) {
+        cpfLimpo = '0' + cpfLimpo;
     }
 
-    // Aplica a máscara XXX.XXX.XXX-XX
+    // 4. (MODIFICADO) Agora, se NÃO tiver 11 dígitos, é inválido.
+    if (cpfLimpo.length !== 11) {
+        return cpfString; // Retorna a string original (com pontos, etc.) se for inválida
+    }
+
+    // 5. Aplica a máscara XXX.XXX.XXX-XX
     return `${cpfLimpo.slice(0, 3)}.${cpfLimpo.slice(3, 6)}.${cpfLimpo.slice(6, 9)}-${cpfLimpo.slice(9, 11)}`;
 }
 // =======================================================
