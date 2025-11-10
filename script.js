@@ -117,6 +117,51 @@ function formatarCPF(cpf) {
 }
 // =======================================================
 
+// ======== FUNÇÃO DE DATA CORRIGIDA (MAIS ROBUSTA) ========
+function formatarDataExcel(valor) {
+    // 1. Se o valor for nulo, indefinido ou vazio, retorna vazio.
+    if (!valor) {
+        return '';
+    }
+
+    // 2. Tenta converter para um número.
+    const serial = Number(valor);
+
+    // 3. Se não for um número (isNaN) ou não for um serial válido (ex: 0 ou 1),
+    //    retorna o valor original (pode já ser uma string de data "N/A", etc).
+    if (isNaN(serial) || serial < 2) {
+        return String(valor);
+    }
+    
+    // 4. Se for um número muito baixo (provavelmente não é uma data serial do Excel)
+    //    retorna o valor original. (O 45693 é válido).
+    //    Vamos usar 20000 como um corte (datas antes de ~1954)
+    if (serial < 20000) {
+         return String(valor);
+    }
+
+    try {
+        // 5. (serial - 25569) é o ajuste do "epoch" do Excel (1900) para o epoch do Unix (1970)
+        //    86400000 é o número de milissegundos em um dia
+        const dataJS = new Date((serial - 25569) * 86400000);
+        
+        // 6. Adiciona o ajuste de fuso horário (para evitar que vire o dia anterior)
+        dataJS.setMinutes(dataJS.getMinutes() + dataJS.getTimezoneOffset());
+
+        // 7. Formata para dd/mm/yyyy
+        const dia = String(dataJS.getDate()).padStart(2, '0');
+        const mes = String(dataJS.getMonth() + 1).padStart(2, '0'); // Mês é base 0, por isso +1
+        const ano = dataJS.getFullYear();
+        
+        return `${dia}/${mes}/${ano}`;
+
+    } catch (e) {
+        console.error("Erro ao formatar data:", e);
+        return String(valor); // Retorna o original em caso de erro
+    }
+}
+// =======================================================
+
 // ======== FUNÇÃO PARA FORMATAR TEMPO DE EMPRESA (em dias) ========
 function formatarTempoDeEmpresa(dias) {
     if (!dias) {
@@ -171,10 +216,8 @@ const NOME_TABELA_QLP = 'QLP';
 const NOME_TABELA_METAS = 'metas_qlp';
 
 
-// 3. Função Principal de Setup (COM DEBUG)
+// 3. Função Principal de Setup
 function setupDashboard() {
-    console.log("DEBUG: 1. setupDashboard() EXECUTADO!"); 
-
     // --- Elementos da "Visão Geral" ---
     dashboardContainer = document.getElementById('dashboard-container');
     loadingIndicator = document.getElementById('loading-indicator');
@@ -197,8 +240,6 @@ function setupDashboard() {
     reportTableBodyQLP = document.getElementById('report-table-body-qlp');
     reportTableBodyPCD = document.getElementById('report-table-body-pcd');
     reportTableBodyJovem = document.getElementById('report-table-body-jovem');
-    
-    console.log("DEBUG: 2. Elementos do DOM capturados."); 
 
     // --- Event Listeners dos Filtros (Visão Geral) - COM CHECAGEM ---
     if (searchBar) {
@@ -224,7 +265,6 @@ function setupDashboard() {
     
     // --- Event Listeners da Navegação ---
     setupNavigation();
-    console.log("DEBUG: 3. Navegação e Listeners configurados."); 
 
     // --- Carga Inicial ---
     popularFiltrosDinamicos();
@@ -273,8 +313,6 @@ function setupDashboard() {
         carregarColaboradores(); // Carrega os cards
     }
     // ================== FIM DA MODIFICAÇÃO ==================
-    
-    console.log("DEBUG: 4. Carga inicial de dados disparada."); 
 }
 
 // 4. Função de Navegação da Sidebar (ATUALIZADA)
@@ -385,12 +423,11 @@ function buildQuery() {
     return query;
 }
 async function carregarColaboradores() {
-    console.log("DEBUG: 5. carregarColaboradores() chamado..."); 
     currentPage = 0; 
     
     // Verificação de segurança
     if (!loadingIndicator || !dashboardContainer || !loadMoreButton) {
-        console.error("DEBUG: Elementos principais (loading, dashboard) são nulos! Verifique o HTML.");
+        console.error("Elementos principais (loading, dashboard) são nulos! Verifique o HTML.");
         return;
     }
     
@@ -421,7 +458,6 @@ async function carregarColaboradores() {
     if (data.length === ITENS_POR_PAGINA) {
         loadMoreButton.style.display = 'block';
     }
-    console.log("DEBUG: 6. Colaboradores carregados e desenhados."); 
 }
 async function carregarMais() {
     currentPage++;
@@ -451,7 +487,7 @@ function criarCardColaborador(colaborador) {
     const nome = corrigirStringQuebrada(colaborador.NOME) || '';
     
     // ======== FORMATAÇÃO DE CPF APLICADA ========
-    const cpf = formatarCPF(colaborador.CPF); // Removido '|| ""' pois a função já trata isso
+    const cpf = formatarCPF(colaborador.CPF); 
     
     const funcao = corrigirStringQuebrada(colaborador['CARGO ATUAL']) || ''; 
     const area = corrigirStringQuebrada(colaborador.ATIVIDADE) || '';
@@ -467,7 +503,12 @@ function criarCardColaborador(colaborador) {
     
     const turno = corrigirStringQuebrada(colaborador.TURNO) || '';
     const lider = corrigirStringQuebrada(colaborador.LIDER) || '';
-    const dataPromocao = colaborador.DATA_PROMOCAO || '';
+    
+    // ======== MUDANÇA AQUI ========
+    const ultimaFuncao = corrigirStringQuebrada(colaborador.CARGO_ANTIGO) || '';
+    // Usa a nova função de formatação de data
+    const dataPromocao = formatarDataExcel(colaborador['DATA DA PROMOCAO']);
+    // ============================
     
     let statusClass = '';
     if (status.toUpperCase() === 'ATIVO') {
@@ -503,7 +544,8 @@ function criarCardColaborador(colaborador) {
                 <p><strong>TELEFONE DE EMERGENCIA:</strong> <span>${telEmergencia}</span></p>
                 <p><strong>TURNO:</strong> <span>${turno}</span></p>
                 <p><strong>LIDER IMEDIATO:</strong> <span>${lider}</span></p>
-                <p><strong>ULTIMA FUNÇÃO:</strong> <span></span></p>
+                
+                <p><strong>ULTIMA FUNÇÃO:</strong> <span>${ultimaFuncao}</span></p>
                 <p><strong>DATA ULTIMA PROMOÇÃO:</strong> <span>${dataPromocao}</span></p>
                 <p><strong>CLASSIFICAÇÃO CICLO DE GENTE:</strong> <span></span></p>
                 <p><strong>HISTORICO DE ADVERTENCIAS:</strong> <span></span></p>
@@ -520,7 +562,6 @@ function criarCardColaborador(colaborador) {
 // 6. Funções de População de Filtros (Visão Geral)
 async function popularFiltrosDinamicos() {
     if (!filterArea || !filterLider) { 
-        console.warn("DEBUG: Dropdowns de filtro não encontrados.");
         return;
     }
     
@@ -573,7 +614,6 @@ async function popularFiltrosDinamicos() {
 // 7. Funções do "Painel de Gestão"
 async function popularDropdownMetas() {
     if (!metaAreaSelect) {
-        console.warn("DEBUG: Dropdown de metas não encontrado.");
         return;
     }
     
@@ -738,7 +778,7 @@ async function fetchProcessedData() {
 async function carregarRelatorioMetas() {
     // Verifica se os 3 tbodys existem
     if (!reportTableBodyQLP || !reportTableBodyPCD || !reportTableBodyJovem) {
-        console.error("DEBUG: Tabelas de relatório (tbody) não encontradas.");
+        console.error("Tabelas de relatório (tbody) não encontradas.");
         return;
     }
     // Define "Carregando" para as 3 tabelas
@@ -854,7 +894,6 @@ async function carregarRelatorioMetas() {
 // ------ FUNÇÕES DE GRÁFICO SEPARADAS (AGORA COM TOTAL E NÚMEROS) ------
 
 async function carregarGraficoQLP() {
-    console.log("DEBUG: 7. carregarGraficoQLP() chamado...");
     const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
     if (error) return;
 
@@ -928,7 +967,6 @@ async function carregarGraficoQLP() {
 }
 
 async function carregarGraficoPCD() {
-    console.log("DEBUG: 8. carregarGraficoPCD() chamado...");
     const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
     if (error) return;
 
@@ -1011,7 +1049,6 @@ async function carregarGraficoPCD() {
 }
 
 async function carregarGraficoJovemAprendiz() {
-    console.log("DEBUG: 9. carregarGraficoJovemAprendiz() chamado...");
     const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
     if (error) return;
 
@@ -1097,19 +1134,14 @@ async function carregarGraficoJovemAprendiz() {
 
 // ======== 10. Auth Guard (Proteção da Página com sessionStorage) ========
 (function() {
-    console.log("DEBUG: Auth Guard INICIADO."); 
     if (sessionStorage.getItem('usuarioLogado') !== 'true') {
-        console.log("DEBUG: Usuário NÃO logado. Redirecionando para login.html");
         window.location.href = 'login.html';
     } else {
-        console.log("DEBUG: Usuário LOGADO. Verificando DOM...");
         // Se houver sessão, o usuário está logado.
         if (document.readyState === 'loading') {
-            console.log("DEBUG: DOM carregando. Aguardando DOMContentLoaded.");
             document.addEventListener('DOMContentLoaded', setupDashboard);
         } else {
             // DOM já está pronto!
-            console.log("DEBUG: DOM pronto. Executando setupDashboard() agora.");
             setupDashboard();
         }
     }
