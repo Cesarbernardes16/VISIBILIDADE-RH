@@ -200,6 +200,7 @@ function formatarTempoDeEmpresa(dias) {
 // 2. Elementos HTML (Globais - só declaração)
 let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton;
 let metaForm, metaAreaSelect, metaValorInput, metaPCDInput, metaJovemInput, metaSubmitButton, metaSuccessMessage;
+let filterClassificacao; // ======== NOVO FILTRO ========
 
 // ======== ATUALIZADO: Três TBody Elements ========
 let reportTableBodyQLP, reportTableBodyPCD, reportTableBodyJovem;
@@ -226,6 +227,7 @@ function setupDashboard() {
     filterArea = document.getElementById('filter-area');
     filterLider = document.getElementById('filter-lider');
     loadMoreButton = document.getElementById('load-more-button');
+    filterClassificacao = document.getElementById('filter-classificacao'); // ======== CAPTURA NOVO FILTRO ========
     
     // --- Elementos do "Painel de Gestão" ---
     metaForm = document.getElementById('meta-form');
@@ -257,6 +259,11 @@ function setupDashboard() {
     if (loadMoreButton) {
         loadMoreButton.addEventListener('click', carregarMais);
     }
+    // ======== ADICIONA EVENT LISTENER PARA NOVO FILTRO ========
+    if (filterClassificacao) {
+        filterClassificacao.addEventListener('change', carregarColaboradores);
+    }
+    // ========================================================
     
     // --- Event Listeners do Painel de Gestão - COM CHECAGEM ---
     if (metaForm) {
@@ -398,6 +405,7 @@ function buildQuery() {
     const status = filterStatus ? filterStatus.value : '';
     const area = filterArea ? filterArea.value : '';
     const lider = filterLider ? filterLider.value : '';
+    const classificacao = filterClassificacao ? filterClassificacao.value : ''; // ======== LÊ O NOVO FILTRO ========
 
     let query = supabaseClient.from(NOME_TABELA_QLP).select('*');
     if (searchTerm) {
@@ -419,6 +427,11 @@ function buildQuery() {
     if (lider) {
         query = query.eq('LIDER', lider);
     }
+    // ======== ADICIONA O NOVO FILTRO À QUERY ========
+    if (classificacao) {
+        query = query.eq('CLASSIFICACAO', classificacao);
+    }
+    // ============================================
     query = query.order('NOME', { ascending: true });
     return query;
 }
@@ -504,11 +517,33 @@ function criarCardColaborador(colaborador) {
     const turno = corrigirStringQuebrada(colaborador.TURNO) || '';
     const lider = corrigirStringQuebrada(colaborador.LIDER) || '';
     
-    // ======== MUDANÇA AQUI ========
     const ultimaFuncao = corrigirStringQuebrada(colaborador.CARGO_ANTIGO) || '';
-    // Usa a nova função de formatação de data
     const dataPromocao = formatarDataExcel(colaborador['DATA DA PROMOCAO']);
-    // ============================
+
+    // ======== LÓGICA DO BADGE DE CLASSIFICAÇÃO ========
+    const classificacao = colaborador.CLASSIFICACAO || 'SEM';
+    let classificacaoClass = '';
+
+    switch (classificacao.toUpperCase()) {
+        case 'DESLIGAR':
+            classificacaoClass = 'classificacao-desligar';
+            break;
+        case 'RECUPERAR':
+            classificacaoClass = 'classificacao-recuperar';
+            break;
+        case 'BOM':
+            classificacaoClass = 'classificacao-bom';
+            break;
+        case 'MUITO BOM':
+            classificacaoClass = 'classificacao-muito-bom';
+            break;
+        case 'PREPARAR':
+            classificacaoClass = 'classificacao-preparar';
+            break;
+        default:
+            classificacaoClass = 'classificacao-sem'; // Para 'SEM' e outros
+    }
+    // ==============================================
     
     let statusClass = '';
     if (status.toUpperCase() === 'ATIVO') {
@@ -544,10 +579,10 @@ function criarCardColaborador(colaborador) {
                 <p><strong>TELEFONE DE EMERGENCIA:</strong> <span>${telEmergencia}</span></p>
                 <p><strong>TURNO:</strong> <span>${turno}</span></p>
                 <p><strong>LIDER IMEDIATO:</strong> <span>${lider}</span></p>
-                
                 <p><strong>ULTIMA FUNÇÃO:</strong> <span>${ultimaFuncao}</span></p>
                 <p><strong>DATA ULTIMA PROMOÇÃO:</strong> <span>${dataPromocao}</span></p>
-                <p><strong>CLASSIFICAÇÃO CICLO DE GENTE:</strong> <span></span></p>
+                
+                <p><strong>CLASSIFICAÇÃO CICLO DE GENTE:</strong> <span class="classificacao-badge ${classificacaoClass}">${classificacao}</span></p>
                 <p><strong>HISTORICO DE ADVERTENCIAS:</strong> <span></span></p>
                 <p><strong>HISTORICO DE SUSPENSÃO:</strong> <span></span></p>
                 <p><strong>BANCO DE HORAS TOTAL:</strong> <span></span></p>
@@ -561,39 +596,36 @@ function criarCardColaborador(colaborador) {
 
 // 6. Funções de População de Filtros (Visão Geral)
 async function popularFiltrosDinamicos() {
-    if (!filterArea || !filterLider) { 
+    // ======== VERIFICA O NOVO FILTRO ========
+    if (!filterArea || !filterLider || !filterClassificacao) { 
         return;
     }
     
     const { data, error } = await supabaseClient
         .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE, LIDER'); // Otimizado para buscar só o necessário
+        .select('ATIVIDADE, LIDER, CLASSIFICACAO'); // ======== BUSCA A NOVA COLUNA ========
 
     if (error) {
         console.error('Erro ao buscar dados para filtros:', error);
         return;
     }
 
-    // MODIFICAÇÃO: Lógica de preenchimento dos filtros corrigida
+    // --- Popula Áreas (sem mudança) ---
     const areasMap = new Map();
     data.forEach(item => {
         if (item.ATIVIDADE) {
-            // Salva o original (quebrado) e o corrigido
             areasMap.set(item.ATIVIDADE, corrigirStringQuebrada(item.ATIVIDADE));
         }
     });
-    // Ordena pelos nomes corrigidos
     const sortedAreas = [...areasMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
     
-    // Limpa opções antigas (exceto a primeira)
     filterArea.innerHTML = '<option value="">Toda Área</option>';
     
     sortedAreas.forEach(([original, corrigido]) => {
-        // O 'value' é o original (para o filtro funcionar)
-        // O texto (innerHTML) é o corrigido (para o usuário ver)
         filterArea.innerHTML += `<option value="${original}">${corrigido}</option>`;
     });
     
+    // --- Popula Líderes (sem mudança) ---
     const lideresMap = new Map();
     data.forEach(item => {
         if (item.LIDER) {
@@ -602,12 +634,29 @@ async function popularFiltrosDinamicos() {
     });
     const sortedLideres = [...lideresMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
     
-    // Limpa opções antigas (exceto a primeira)
     filterLider.innerHTML = '<option value="">Todo Líder</option>';
     
     sortedLideres.forEach(([original, corrigido]) => {
         filterLider.innerHTML += `<option value="${original}">${corrigido}</option>`;
     });
+
+    // ======== LÓGICA PARA POPULAR O NOVO FILTRO ========
+    const classificacoesMap = new Map();
+    data.forEach(item => {
+        if (item.CLASSIFICACAO) {
+            // Não precisa de correção, usa o valor direto
+            classificacoesMap.set(item.CLASSIFICACAO, item.CLASSIFICACAO);
+        }
+    });
+    // Ordena alfabeticamente
+    const sortedClassificacoes = [...classificacoesMap.keys()].sort(); 
+    
+    filterClassificacao.innerHTML = '<option value="">Toda Classificação</option>';
+    
+    sortedClassificacoes.forEach(classif => {
+        filterClassificacao.innerHTML += `<option value="${classif}">${classif}</option>`;
+    });
+    // ==================================================
 }
 
 

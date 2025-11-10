@@ -646,3 +646,41 @@ body {
     color: #192A56; /* Cor principal (azul escuro) */
     display: block;
 }
+
+/* ======== NOVOS ESTILOS PARA BADGE DE CLASSIFICAÇÃO ======== */
+.classificacao-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #333;
+    background-color: #f0f0f0; /* Cor padrão para "SEM" */
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+
+/* Vermelho -> Laranja -> Amarelo -> Verde Claro -> Verde Escuro -> Azul */
+.classificacao-desligar {
+    background-color: #dc3545; /* Vermelho (igual Desligados) */
+    color: white;
+}
+.classificacao-recuperar {
+    background-color: #ffc107; /* Amarelo (igual Afastado) */
+    color: #333;
+}
+.classificacao-bom {
+    background-color: #d4edda; /* Verde Claro (igual PCD Sim) */
+    color: #155724;
+}
+.classificacao-muito-bom {
+    background-color: #28a745; /* Verde (igual Ativo) */
+    color: white;
+}
+.classificacao-preparar {
+    background-color: #4a69e2; /* Azul (igual Botão Login) */
+    color: white;
+}
+.classificacao-sem {
+    background-color: #f8f9fa; /* Cinza claro */
+    color: #555;
+    border: 1px solid #ddd;
+}
