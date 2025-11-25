@@ -1,46 +1,73 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Visão RH</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="login-body">
+// ===========================
+// login.js (versão corrigida)
+// ===========================
 
-    <div class="login-container">
-        <div class="login-header">
-            <span class="login-icon">📄</span>
-            <h2>Gestão RH</h2>
-            <p>Plataforma de Funcionário</p>
-        </div>
+// 1. Elementos do DOM
+const loginForm = document.getElementById('login-form');
+const cpfInput = document.getElementById('cpf');
+const senhaInput = document.getElementById('senha');
+const loginButton = document.getElementById('login-button');
+const errorMessage = document.getElementById('error-message');
 
-        <form id="login-form" class="login-form">
-            <div class="input-group">
-                <label for="cpf">CPF</label>
-                <input type="text" id="cpf" placeholder="000.000.000-00" required>
-            </div>
-            
-            <div class="input-group">
-                <label for="senha">Senha</label>
-                <input type="password" id="senha" placeholder="••••••••" required>
-                </div>
+// ===============================
+// 2. Carregar usuários do ENV.js
+// ===============================
+let USUARIOS_TESTE = {};
 
-            <button type="submit" id="login-button">Entrar</button>
-            <p id="error-message" class="error-message"></p>
-        </form>
+try {
+    if (typeof ENV !== 'undefined' && ENV.USUARIOS_TESTE) {
+        USUARIOS_TESTE = ENV.USUARIOS_TESTE;
+    } else {
+        console.warn("⚠️ ENV.USUARIOS_TESTE não encontrado.");
+    }
+} catch (err) {
+    console.error("Erro ao carregar ENV:", err);
+}
 
-        <div class="test-credentials">
-            <p><strong>Credenciais de Teste (senha: 123456):</strong></p>
-            <ul>
-                <li>Admin (CPF): 11122233344</li>
-                <li>Gestor (CPF): 22233344455</li>
-            </ul>
-        </div>
-    </div>
+// ===============================
+// 3. Verificação de sessão ativa
+// ===============================
+if (sessionStorage.getItem('usuarioLogado') === 'true') {
+    window.location.href = 'index.html';
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
-    <script src="login.js"></script>
-</body>
-</html>
+// ===============================
+// 4. Função para limpar CPF
+// ===============================
+function limparCPF(cpf) {
+    return cpf.replace(/\D/g, ''); // remove pontos, traços e tudo que não for número
+}
+
+// ===============================
+// 5. Listener do formulário
+// ===============================
+loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    let cpf = limparCPF(cpfInput.value.trim());
+    let senha = senhaInput.value.trim();
+
+    loginButton.disabled = true;
+    loginButton.textContent = 'Entrando...';
+    errorMessage.textContent = '';
+
+    // DEBUG opcional
+    // console.log("CPF digitado:", cpf);
+    // console.log("Usuários carregados:", USUARIOS_TESTE);
+
+    // ===============================
+    // 6. Verificação de usuário
+    // ===============================
+    if (USUARIOS_TESTE[cpf] && USUARIOS_TESTE[cpf].senha === senha) {
+
+        sessionStorage.setItem('usuarioLogado', 'true');
+        sessionStorage.setItem('usuarioNome', USUARIOS_TESTE[cpf].nome);
+
+        window.location.href = 'index.html';
+    
+    } else {
+        errorMessage.textContent = 'CPF ou senha inválidos.';
+        loginButton.disabled = false;
+        loginButton.textContent = 'Entrar';
+    }
+});
