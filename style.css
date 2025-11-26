@@ -684,3 +684,202 @@ body {
     color: #555;
     border: 1px solid #ddd;
 }
+/* ======== ESTILOS DA SETA DE EXPANDIR (NO CARD) ======== */
+.card-footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.card-footer:hover {
+    background-color: #e2e6ea;
+}
+
+.expand-icon {
+    font-size: 24px;
+    color: #4a69e2;
+    font-weight: bold;
+    display: block;
+    transform: rotate(0deg);
+    transition: transform 0.3s;
+}
+
+/* ======== ESTILOS DO MODAL (JANELA EXPANDIDA) ======== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Fundo escuro transparente */
+    z-index: 1000; /* Fica em cima de tudo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(3px); /* Efeito de desfoque no fundo */
+}
+
+.modal-content {
+    background-color: #fff;
+    width: 90%;
+    max-width: 1200px; /* Largura máxima da janela */
+    max-height: 90vh; /* Altura máxima (90% da tela) */
+    border-radius: 12px;  /* Cantos arredondados */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-0px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff; /* X branco pois o header terá cor */
+    cursor: pointer;
+    z-index: 10;
+}
+
+.modal-header-custom {
+    padding: 25px;
+    background-color: #192A56; /* Azul escuro do tema */
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.modal-header-custom img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    object-fit: cover;
+}
+
+.modal-body-scroll {
+    padding: 30px;
+    overflow-y: auto; /* Permite rolar se tiver muito texto */
+    flex-grow: 1;
+}
+
+/* Grid para organizar os dados em 2 colunas */
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Duas colunas iguais */
+    gap: 20px;
+}
+
+/* Se a tela for pequena (celular), vira 1 coluna */
+@media (max-width: 600px) {
+    .modal-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.modal-item {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.modal-item strong {
+    display: block;
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.modal-item span {
+    font-size: 1.1em;
+    color: #333;
+    font-weight: 500;
+    word-break: break-word;
+}
+/* ======== ESTILOS DO CICLO DE GENTE (PDI) NO MODAL ======== */
+
+.pdi-section {
+    margin-top: 30px;
+    border-top: 2px solid #eee;
+    padding-top: 20px;
+    grid-column: 1 / -1; /* Faz ocupar a largura total do grid */
+}
+
+.pdi-section h3 {
+    color: #192A56;
+    margin: 0 0 15px 0;
+    border-left: 5px solid #4a69e2;
+    padding-left: 10px;
+    font-size: 1.3em;
+}
+
+.pdi-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Card de cada competência */
+.pdi-card {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #ccc; /* Cor padrão (pendente) */
+    border-radius: 6px;
+    padding: 15px;
+    transition: box-shadow 0.2s;
+}
+
+.pdi-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Título da Competência */
+.pdi-card h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 1.1em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+/* Grid interno dos detalhes da ação */
+.pdi-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.pdi-item strong {
+    display: block;
+    font-size: 0.75em;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    letter-spacing: 0.5px;
+}
+
+.pdi-item span {
+    font-size: 0.95em;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Cores de status */
+.pdi-card[data-status="CONCLUIDO"],
+.pdi-card[data-status="REALIZADO"] { border-left-color: #28a745; }
+
+.pdi-card[data-status="ATRASADO"] { border-left-color: #dc3545; }
+
+.pdi-card[data-status="EM ANDAMENTO"] { border-left-color: #007bff; }

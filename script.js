@@ -12,214 +12,81 @@ function corrigirStringQuebrada(texto) {
         return texto;
     }
 
-    // ======== CORREÇÃO CRÍTICA DO GATILHO ========
-    // Deve ser o caractere '' (Replacement Character), não ' ' (string vazia).
     if (texto.includes('')) { 
-        
-        // Caso 1: DISTRIBUIÇÃO (Ex: "DISTRIBUIO URBANA")
-        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) {
-            return 'DISTRIBUIÇÃO URBANA';
-        }
-        
-        // Caso 2: Ajudante Distribuição (Ex: "Ajudante Distribuio")
-        if (texto.includes('Ajudante') && texto.includes('Distribui')) {
-            return 'Ajudante Distribuição';
-        }
-        
-        // Caso 3: Operações (Ex: "Analista Operaes")
-        if (texto.includes('Analista') && texto.includes('Opera')) {
-            return 'Analista Operações';
-        }
-        
-        // Caso 4: Negócios (Ex: "Representante de Negcios II")
+        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) return 'DISTRIBUIÇÃO URBANA';
+        if (texto.includes('Ajudante') && texto.includes('Distribui')) return 'Ajudante Distribuição';
+        if (texto.includes('Analista') && texto.includes('Opera')) return 'Analista Operações';
         if (texto.includes('Representante') && texto.includes('Neg')) {
-            if (texto.includes(' II')) { return 'Representante de Negócios II'; }
-            if (texto.includes(' I')) { return 'Representante de Negócios I'; }
-            return 'Representante de Negócios'; // Padrão
+            if (texto.includes(' II')) return 'Representante de Negócios II';
+            if (texto.includes(' I')) return 'Representante de Negócios I';
+            return 'Representante de Negócios'; 
         }
-
-        // Caso 5: Turno (Ex: "3 TURNO")
-        if (texto.includes('3') && texto.includes('TURNO')) {
-            return '3º TURNO';
-        }
-
-        // ======== NOVAS REGRAS (DA ÚLTIMA IMAGEM) ========
-        // Caso 6: Armazém (Ex: "Ajudante De Armazm")
-        if (texto.includes('Armaz') && texto.includes('m')) {
-            if (texto.includes('Ajudante')) {
-                return 'Ajudante De Armazém';
-            }
-            return 'Armazém'; // Padrão
-        }
-
-        // Caso 7: Caminhão (Ex: "Motorista Caminho")
-        if (texto.includes('Caminh') && texto.includes('o')) {
-            if (texto.includes('Motorista')) {
-                return 'Motorista Caminhão';
-            }
-            return 'Caminhão'; // Padrão
-        }
-        // =================================================
-
-        // Se tiver '' mas não for um caso conhecido, retorna o original (com o erro)
+        if (texto.includes('3') && texto.includes('TURNO')) return '3º TURNO';
+        if (texto.includes('Armaz') && texto.includes('m')) return (texto.includes('Ajudante')) ? 'Ajudante De Armazém' : 'Armazém';
+        if (texto.includes('Caminh') && texto.includes('o')) return (texto.includes('Motorista')) ? 'Motorista Caminhão' : 'Caminhão';
+        
         return texto;
     }
-    
-    // Se não houver '', o texto está limpo.
     return texto;
 }
-// ================================================================
 
-// ======== FUNÇÃO PARA FORMATAR SALÁRIO ========
+// ======== FUNÇÕES DE FORMATAÇÃO ========
 function formatarSalario(valor) {
-    if (!valor) {
-        return '';
-    }
-    const numeroLimpo = String(valor)
-        .replace("R$", "")
-        .replace(/\./g, "")
-        .replace(",", ".");
-        
+    if (!valor) return '';
+    const numeroLimpo = String(valor).replace("R$", "").replace(/\./g, "").replace(",", ".");
     const numero = parseFloat(numeroLimpo);
-    if (isNaN(numero)) {
-        return valor;
-    }
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(numero);
+    if (isNaN(numero)) return valor;
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numero);
 }
-// =======================================================
 
-// ======== FUNÇÃO PARA FORMATAR CPF (CORRIGIDA - COM PAD DE 0) ========
 function formatarCPF(cpf) {
-    // 1. Se o valor for nulo ou indefinido, retorna vazio.
-    if (!cpf) {
-        return '';
-    }
-
-    // 2. Converte para string e limpa não-dígitos
-    const cpfString = String(cpf);
-    let cpfLimpo = cpfString.replace(/[^\d]/g, '');
-
-    // 3. (NOVA REGRA) Se tiver 10 dígitos, adiciona o zero à esquerda.
-    if (cpfLimpo.length === 10) {
-        cpfLimpo = '0' + cpfLimpo;
-    }
-
-    // 4. (MODIFICADO) Agora, se NÃO tiver 11 dígitos, é inválido.
-    if (cpfLimpo.length !== 11) {
-        return cpfString; // Retorna a string original (com pontos, etc.) se for inválida
-    }
-
-    // 5. Aplica a máscara XXX.XXX.XXX-XX
-    return `${cpfLimpo.slice(0, 3)}.${cpfLimpo.slice(3, 6)}.${cpfLimpo.slice(6, 9)}-${cpfLimpo.slice(9, 11)}`;
+    if (!cpf) return '';
+    let c = String(cpf).replace(/[^\d]/g, '');
+    if (c.length === 10) c = '0' + c;
+    if (c.length !== 11) return cpf;
+    return `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9, 11)}`;
 }
-// =======================================================
 
-// ======== FUNÇÃO DE DATA CORRIGIDA (MAIS ROBUSTA) ========
 function formatarDataExcel(valor) {
-    // 1. Se o valor for nulo, indefinido ou vazio, retorna vazio.
-    if (!valor) {
-        return '';
-    }
-
-    // 2. Tenta converter para um número.
+    if (!valor) return '';
     const serial = Number(valor);
-
-    // 3. Se não for um número (isNaN) ou não for um serial válido (ex: 0 ou 1),
-    //    retorna o valor original (pode já ser uma string de data "N/A", etc).
-    if (isNaN(serial) || serial < 2) {
-        return String(valor);
-    }
-    
-    // 4. Se for um número muito baixo (provavelmente não é uma data serial do Excel)
-    //    retorna o valor original. (O 45693 é válido).
-    //    Vamos usar 20000 como um corte (datas antes de ~1954)
-    if (serial < 20000) {
-         return String(valor);
-    }
-
+    if (isNaN(serial) || serial < 20000) return String(valor);
     try {
-        // 5. (serial - 25569) é o ajuste do "epoch" do Excel (1900) para o epoch do Unix (1970)
-        //    86400000 é o número de milissegundos em um dia
-        const dataJS = new Date((serial - 25569) * 86400000);
-        
-        // 6. Adiciona o ajuste de fuso horário (para evitar que vire o dia anterior)
-        dataJS.setMinutes(dataJS.getMinutes() + dataJS.getTimezoneOffset());
-
-        // 7. Formata para dd/mm/yyyy
-        const dia = String(dataJS.getDate()).padStart(2, '0');
-        const mes = String(dataJS.getMonth() + 1).padStart(2, '0'); // Mês é base 0, por isso +1
-        const ano = dataJS.getFullYear();
-        
-        return `${dia}/${mes}/${ano}`;
-
-    } catch (e) {
-        console.error("Erro ao formatar data:", e);
-        return String(valor); // Retorna o original em caso de erro
-    }
+        const d = new Date((serial - 25569) * 86400000);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        return d.toLocaleDateString('pt-BR');
+    } catch (e) { return String(valor); }
 }
-// =======================================================
 
-// ======== FUNÇÃO PARA FORMATAR TEMPO DE EMPRESA (em dias) ========
 function formatarTempoDeEmpresa(dias) {
-    if (!dias) {
-        return '';
+    if (!dias) return '';
+    const n = parseInt(dias, 10);
+    if (isNaN(n) || n <= 0) return ''; 
+    const a = Math.floor(n / 365.25);
+    const m = Math.floor((n % 365.25) / 30.44); 
+    let res = '';
+    if (a > 0) res += `${a} ${a === 1 ? 'ano' : 'anos'}`;
+    if (m > 0) {
+        if (a > 0) res += ' e ';
+        res += `${m} ${m === 1 ? 'mês' : 'meses'}`;
     }
-    const numDias = parseInt(dias, 10);
-    if (isNaN(numDias) || numDias <= 0) {
-        return ''; // Retorna vazio se não for um número válido
-    }
-
-    // Usamos 365.25 para uma média mais precisa (anos bissextos)
-    const anos = Math.floor(numDias / 365.25);
-    // 30.44 é η média de dias em um mês (365.25 / 12)
-    const meses = Math.floor((numDias % 365.25) / 30.44); 
-
-    let resultado = '';
-    if (anos > 0) {
-        resultado += `${anos} ${anos === 1 ? 'ano' : 'anos'}`;
-    }
-    if (meses > 0) {
-        if (anos > 0) {
-            resultado += ' e ';
-        }
-        resultado += `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
-    }
-    // Caso tenha menos de 1 mês (ex: 15 dias)
-    if (anos === 0 && meses === 0 && numDias > 0) {
-        return "Menos de 1 mês";
-    }
-    
-    return resultado;
+    return (a === 0 && m === 0) ? "Menos de 1 mês" : res;
 }
-// ================================================================
 
-
-// 2. Elementos HTML (Globais - só declaração)
+// 2. Variáveis Globais
 let dashboardContainer, loadingIndicator, searchBar, filterStatus, filterArea, filterLider, loadMoreButton;
 let metaForm, metaAreaSelect, metaValorInput, metaPCDInput, metaJovemInput, metaSubmitButton, metaSuccessMessage;
-let filterClassificacao; // ======== NOVO FILTRO ========
-
-// ======== ATUALIZADO: Três TBody Elements ========
+let filterClassificacao; 
 let reportTableBodyQLP, reportTableBodyPCD, reportTableBodyJovem;
-
-// ======== Variáveis globais para os Gráficos ========
-let metaChartQLP = null; 
-let metaChartPCD = null;
-let metaChartJovem = null;
-
-// Constantes de Paginação
+let metaChartQLP = null, metaChartPCD = null, metaChartJovem = null;
 const ITENS_POR_PAGINA = 30;
 let currentPage = 0;
+let listaColaboradoresGlobal = []; 
 const NOME_TABELA_QLP = 'QLP';
 const NOME_TABELA_METAS = 'metas_qlp';
 
-
-// 3. Função Principal de Setup
+// 3. Setup Dashboard
 function setupDashboard() {
-    // --- Elementos da "Visão Geral" ---
     dashboardContainer = document.getElementById('dashboard-container');
     loadingIndicator = document.getElementById('loading-indicator');
     searchBar = document.getElementById('search-bar');
@@ -227,9 +94,8 @@ function setupDashboard() {
     filterArea = document.getElementById('filter-area');
     filterLider = document.getElementById('filter-lider');
     loadMoreButton = document.getElementById('load-more-button');
-    filterClassificacao = document.getElementById('filter-classificacao'); // ======== CAPTURA NOVO FILTRO ========
+    filterClassificacao = document.getElementById('filter-classificacao');
     
-    // --- Elementos do "Painel de Gestão" ---
     metaForm = document.getElementById('meta-form');
     metaAreaSelect = document.getElementById('meta-area');
     metaValorInput = document.getElementById('meta-valor');
@@ -238,327 +104,218 @@ function setupDashboard() {
     metaSubmitButton = document.getElementById('meta-submit-button');
     metaSuccessMessage = document.getElementById('meta-success-message');
 
-    // ======== ATUALIZADO: Capturando os 3 <tbody> ========
     reportTableBodyQLP = document.getElementById('report-table-body-qlp');
     reportTableBodyPCD = document.getElementById('report-table-body-pcd');
     reportTableBodyJovem = document.getElementById('report-table-body-jovem');
 
-    // --- Event Listeners dos Filtros (Visão Geral) - COM CHECAGEM ---
-    if (searchBar) {
-        searchBar.addEventListener('input', carregarColaboradores);
-    }
-    if (filterStatus) {
-        filterStatus.addEventListener('change', carregarColaboradores);
-    }
-    if (filterArea) {
-        filterArea.addEventListener('change', carregarColaboradores);
-    }
-    if (filterLider) {
-        filterLider.addEventListener('change', carregarColaboradores);
-    }
-    if (loadMoreButton) {
-        loadMoreButton.addEventListener('click', carregarMais);
-    }
-    // ======== ADICIONA EVENT LISTENER PARA NOVO FILTRO ========
-    if (filterClassificacao) {
-        filterClassificacao.addEventListener('change', carregarColaboradores);
-    }
-    // ========================================================
+    if (searchBar) searchBar.addEventListener('input', carregarColaboradores);
+    if (filterStatus) filterStatus.addEventListener('change', carregarColaboradores);
+    if (filterArea) filterArea.addEventListener('change', carregarColaboradores);
+    if (filterLider) filterLider.addEventListener('change', carregarColaboradores);
+    if (loadMoreButton) loadMoreButton.addEventListener('click', carregarMais);
+    if (filterClassificacao) filterClassificacao.addEventListener('change', carregarColaboradores);
+    if (metaForm) metaForm.addEventListener('submit', handleMetaSubmit);
     
-    // --- Event Listeners do Painel de Gestão - COM CHECAGEM ---
-    if (metaForm) {
-        metaForm.addEventListener('submit', handleMetaSubmit);
-    }
-    
-    // --- Event Listeners da Navegação ---
     setupNavigation();
-
-    // --- Carga Inicial ---
     popularFiltrosDinamicos();
     popularDropdownMetas(); 
+    restaurarAbaAtiva();
+}
 
-    // ======== MODIFICAÇÃO: Restaura a aba ativa ou define o padrão ========
+function restaurarAbaAtiva() {
     const activeTab = sessionStorage.getItem('activeTab');
-
-    // Captura os elementos de navegação e conteúdo
-    const navVisaoGeral = document.getElementById('nav-visao-geral');
-    const navPainelGestao = document.getElementById('nav-painel-gestao');
-    const navGraficos = document.getElementById('nav-graficos'); // NOVO
     const contentVisaoGeral = document.getElementById('visao-geral-content');
     const contentGestao = document.getElementById('gestao-content');
-    const contentGraficos = document.getElementById('graficos-content'); // NOVO
+    const contentGraficos = document.getElementById('graficos-content');
+    const navVisaoGeral = document.getElementById('nav-visao-geral');
+    const navPainelGestao = document.getElementById('nav-painel-gestao');
+    const navGraficos = document.getElementById('nav-graficos');
 
     if (activeTab === 'gestao') {
-        if (contentVisaoGeral) contentVisaoGeral.style.display = 'none';
-        if (contentGraficos) contentGraficos.style.display = 'none'; // NOVO
-        if (contentGestao) contentGestao.style.display = 'block';
-        
-        if (navVisaoGeral) navVisaoGeral.classList.remove('active');
-        if (navGraficos) navGraficos.classList.remove('active'); // NOVO
-        if (navPainelGestao) navPainelGestao.classList.add('active');
-        
-        carregarRelatorioMetas(); // Carrega o relatório
-    
-    } else if (activeTab === 'graficos') { // NOVO
-        if (contentVisaoGeral) contentVisaoGeral.style.display = 'none';
-        if (contentGestao) contentGestao.style.display = 'none';
-        if (contentGraficos) contentGraficos.style.display = 'block';
-        
-        if (navVisaoGeral) navVisaoGeral.classList.remove('active');
-        if (navPainelGestao) navPainelGestao.classList.remove('active');
-        if (navGraficos) navGraficos.classList.add('active');
-
-        // CHAMA TODOS OS GRÁFICOS
+        if(contentVisaoGeral) contentVisaoGeral.style.display = 'none';
+        if(contentGraficos) contentGraficos.style.display = 'none';
+        if(contentGestao) contentGestao.style.display = 'block';
+        if(navVisaoGeral) navVisaoGeral.classList.remove('active');
+        if(navGraficos) navGraficos.classList.remove('active');
+        if(navPainelGestao) navPainelGestao.classList.add('active');
+        carregarRelatorioMetas();
+    } else if (activeTab === 'graficos') {
+        if(contentVisaoGeral) contentVisaoGeral.style.display = 'none';
+        if(contentGestao) contentGestao.style.display = 'none';
+        if(contentGraficos) contentGraficos.style.display = 'block';
+        if(navVisaoGeral) navVisaoGeral.classList.remove('active');
+        if(navPainelGestao) navPainelGestao.classList.remove('active');
+        if(navGraficos) navGraficos.classList.add('active');
         carregarGraficoQLP();
         carregarGraficoPCD();
         carregarGraficoJovemAprendiz();
-
     } else {
-        // Padrão: Carrega a Visão Geral
-        if (contentGestao) contentGestao.style.display = 'none';
-        if (contentGraficos) contentGraficos.style.display = 'none';
-        carregarColaboradores(); // Carrega os cards
+        if(contentGestao) contentGestao.style.display = 'none';
+        if(contentGraficos) contentGraficos.style.display = 'none';
+        carregarColaboradores();
     }
-    // ================== FIM DA MODIFICAÇÃO ==================
 }
 
-// 4. Função de Navegação da Sidebar (ATUALIZADA)
+// 4. Navegação
 function setupNavigation() {
     const navVisaoGeral = document.getElementById('nav-visao-geral');
     const navPainelGestao = document.getElementById('nav-painel-gestao');
-    const navGraficos = document.getElementById('nav-graficos'); // NOVO
+    const navGraficos = document.getElementById('nav-graficos');
     const navSair = document.getElementById('nav-sair');
     
-    const contentVisaoGeral = document.getElementById('visao-geral-content');
-    const contentGestao = document.getElementById('gestao-content');
-    const contentGraficos = document.getElementById('graficos-content'); // NOVO
-
-    if (navVisaoGeral) {
-        navVisaoGeral.addEventListener('click', (e) => {
-            e.preventDefault();
-            contentVisaoGeral.style.display = 'block';
-            contentGestao.style.display = 'none';
-            contentGraficos.style.display = 'none'; // NOVO
-            
-            navVisaoGeral.classList.add('active');
-            navPainelGestao.classList.remove('active');
-            navGraficos.classList.remove('active'); // NOVO
-            
-            sessionStorage.setItem('activeTab', 'visao-geral'); 
-        });
-    }
-
-    if (navPainelGestao) {
-        navPainelGestao.addEventListener('click', (e) => {
-            e.preventDefault();
-            contentVisaoGeral.style.display = 'none';
-            contentGestao.style.display = 'block';
-            contentGraficos.style.display = 'none'; // NOVO
-
-            navVisaoGeral.classList.remove('active');
-            navPainelGestao.classList.add('active');
-            navGraficos.classList.remove('active'); // NOVO
-            
-            // Carrega o relatório ao clicar na aba
-            carregarRelatorioMetas();
-            
-            sessionStorage.setItem('activeTab', 'gestao'); 
-        });
-    }
-
-    // ======== NOVO: Event listener para Gráficos ========
-    if (navGraficos) {
-        navGraficos.addEventListener('click', (e) => {
-            e.preventDefault();
-            contentVisaoGeral.style.display = 'none';
-            contentGestao.style.display = 'none';
-            contentGraficos.style.display = 'block';
-
-            navVisaoGeral.classList.remove('active');
-            navPainelGestao.classList.remove('active');
-            navGraficos.classList.add('active');
-            
-            // CHAMA TODOS OS GRÁFICOS
-            carregarGraficoQLP();
-            carregarGraficoPCD();
-            carregarGraficoJovemAprendiz();
-            
-            sessionStorage.setItem('activeTab', 'graficos'); 
-        });
-    }
-
-    if (navSair) {
-        navSair.addEventListener('click', (e) => {
-            e.preventDefault();
-            sessionStorage.removeItem('usuarioLogado');
-            sessionStorage.removeItem('usuarioNome');
-            sessionStorage.removeItem('activeTab'); 
-            window.location.href = 'login.html';
-        });
-    }
+    if (navVisaoGeral) navVisaoGeral.addEventListener('click', (e) => {
+        trocarAba(e, 'visao-geral');
+    });
+    if (navPainelGestao) navPainelGestao.addEventListener('click', (e) => {
+        trocarAba(e, 'gestao');
+        carregarRelatorioMetas();
+    });
+    if (navGraficos) navGraficos.addEventListener('click', (e) => {
+        trocarAba(e, 'graficos');
+        carregarGraficoQLP();
+        carregarGraficoPCD();
+        carregarGraficoJovemAprendiz();
+    });
+    if (navSair) navSair.addEventListener('click', (e) => {
+        e.preventDefault();
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+    });
 }
 
+function trocarAba(e, aba) {
+    e.preventDefault();
+    const contents = {
+        'visao-geral': document.getElementById('visao-geral-content'),
+        'gestao': document.getElementById('gestao-content'),
+        'graficos': document.getElementById('graficos-content')
+    };
+    const navs = {
+        'visao-geral': document.getElementById('nav-visao-geral'),
+        'gestao': document.getElementById('nav-painel-gestao'),
+        'graficos': document.getElementById('nav-graficos')
+    };
+    
+    for (let key in contents) {
+        if (contents[key]) contents[key].style.display = (key === aba) ? 'block' : 'none';
+        if (navs[key]) {
+            if (key === aba) navs[key].classList.add('active');
+            else navs[key].classList.remove('active');
+        }
+    }
+    sessionStorage.setItem('activeTab', aba);
+}
 
-// 5. Funções da "Visão Geral" (Cards de Colaboradores)
+// 5. Visão Geral (Cards)
 function buildQuery() {
     const searchTerm = searchBar ? searchBar.value.trim() : '';
     const status = filterStatus ? filterStatus.value : '';
     const area = filterArea ? filterArea.value : '';
     const lider = filterLider ? filterLider.value : '';
-    const classificacao = filterClassificacao ? filterClassificacao.value : ''; // ======== LÊ O NOVO FILTRO ========
+    const classificacao = filterClassificacao ? filterClassificacao.value : '';
 
     let query = supabaseClient.from(NOME_TABELA_QLP).select('*');
-    if (searchTerm) {
-        query = query.ilike('NOME', `%${searchTerm}%`);
-    }
+    if (searchTerm) query = query.ilike('NOME', `%${searchTerm}%`);
     if (status) {
-        if (status === 'AFASTADO') {
-            query = query.or('SITUACAO.eq.AFASTADO,SITUACAO.eq.AFASTAMENTO');
-        } else if (status === 'DESLIGADOS') {
-            query = query.or('SITUACAO.eq.DESLIGADOS,SITUACAO.eq.DESPEDIDA');
-        } else {
-            query = query.eq('SITUACAO', status);
-        }
+        if (status === 'AFASTADO') query = query.or('SITUACAO.eq.AFASTADO,SITUACAO.eq.AFASTAMENTO');
+        else if (status === 'DESLIGADOS') query = query.or('SITUACAO.eq.DESLIGADOS,SITUACAO.eq.DESPEDIDA');
+        else query = query.eq('SITUACAO', status);
     }
-    if (area) {
-        // 'area' aqui é o valor original (quebrado), o que é correto para o filtro
-        query = query.eq('ATIVIDADE', area);
-    }
-    if (lider) {
-        query = query.eq('LIDER', lider);
-    }
-    // ======== ADICIONA O NOVO FILTRO À QUERY ========
-    if (classificacao) {
-        query = query.eq('CLASSIFICACAO', classificacao);
-    }
-    // ============================================
+    if (area) query = query.eq('ATIVIDADE', area);
+    if (lider) query = query.eq('LIDER', lider);
+    if (classificacao) query = query.eq('CLASSIFICACAO', classificacao);
+    
     query = query.order('NOME', { ascending: true });
     return query;
 }
+
 async function carregarColaboradores() {
     currentPage = 0; 
-    
-    // Verificação de segurança
-    if (!loadingIndicator || !dashboardContainer || !loadMoreButton) {
-        console.error("Elementos principais (loading, dashboard) são nulos! Verifique o HTML.");
-        return;
-    }
-    
+    if (!loadingIndicator || !dashboardContainer || !loadMoreButton) return;
     loadingIndicator.style.display = 'block';
     dashboardContainer.innerHTML = ''; 
+    listaColaboradoresGlobal = []; 
     loadMoreButton.style.display = 'none'; 
-    loadMoreButton.disabled = false;
-    const startIndex = 0;
-    const endIndex = ITENS_POR_PAGINA - 1;
-    let query = buildQuery();
-    const { data, error } = await query.range(startIndex, endIndex);
+    
+    const { data, error } = await buildQuery().range(0, ITENS_POR_PAGINA - 1);
     
     loadingIndicator.style.display = 'none';
-    if (error) {
-        console.error('Erro ao buscar dados:', error);
-        dashboardContainer.innerHTML = "<p>Erro ao carregar dados. Verifique o console.</p>";
+    if (error || !data || data.length === 0) {
+        dashboardContainer.innerHTML = error ? "<p>Erro ao carregar.</p>" : "<p>Nenhum colaborador encontrado.</p>";
         return;
     }
-    if (data.length === 0) {
-        dashboardContainer.innerHTML = "<p>Nenhum colaborador encontrado.</p>";
-        return;
-    }
-    let cardsHTML = '';
+    
     data.forEach(colaborador => {
-        cardsHTML += criarCardColaborador(colaborador);
+        const index = listaColaboradoresGlobal.push(colaborador) - 1;
+        dashboardContainer.innerHTML += criarCardColaborador(colaborador, index);
     });
-    dashboardContainer.innerHTML = cardsHTML;
-    if (data.length === ITENS_POR_PAGINA) {
-        loadMoreButton.style.display = 'block';
-    }
+    
+    if (data.length === ITENS_POR_PAGINA) loadMoreButton.style.display = 'block';
+    loadMoreButton.disabled = false;
 }
+
 async function carregarMais() {
     currentPage++;
     loadMoreButton.disabled = true;
     loadMoreButton.textContent = 'Carregando...';
-    const startIndex = currentPage * ITENS_POR_PAGINA;
-    const endIndex = startIndex + ITENS_POR_PAGINA - 1;
-    let query = buildQuery();
-    const { data, error } = await query.range(startIndex, endIndex);
+    
+    const start = currentPage * ITENS_POR_PAGINA;
+    const { data, error } = await buildQuery().range(start, start + ITENS_POR_PAGINA - 1);
+    
     if (error) {
-        console.error('Erro ao buscar mais dados:', error);
-        loadMoreButton.textContent = 'Erro ao carregar';
+        loadMoreButton.textContent = 'Erro';
         return;
     }
+    
     data.forEach(colaborador => {
-        dashboardContainer.innerHTML += criarCardColaborador(colaborador);
+        const index = listaColaboradoresGlobal.push(colaborador) - 1;
+        dashboardContainer.innerHTML += criarCardColaborador(colaborador, index);
     });
+    
     loadMoreButton.disabled = false;
     loadMoreButton.textContent = 'Carregar Mais';
-    if (data.length < ITENS_POR_PAGINA) {
-        loadMoreButton.style.display = 'none';
-    }
+    if (data.length < ITENS_POR_PAGINA) loadMoreButton.style.display = 'none';
 }
-function criarCardColaborador(colaborador) {
-    // MODIFICAÇÃO: Aplicando a função de correção nos campos
+
+function criarCardColaborador(colaborador, index) {
     const status = colaborador.SITUACAO || 'Indefinido'; 
     const nome = corrigirStringQuebrada(colaborador.NOME) || '';
-    
-    // ======== FORMATAÇÃO DE CPF APLICADA ========
     const cpf = formatarCPF(colaborador.CPF); 
-    
     const funcao = corrigirStringQuebrada(colaborador['CARGO ATUAL']) || ''; 
     const area = corrigirStringQuebrada(colaborador.ATIVIDADE) || '';
-    
-    // ======== FORMATAÇÃO DE TEMPO DE EMPRESA APLICADA ========
     const tempoEmpresa = formatarTempoDeEmpresa(colaborador['TEMPO DE EMPRESA']); 
-    
     const escolaridade = corrigirStringQuebrada(colaborador.ESCOLARIDADE) || ''; 
     const salario = formatarSalario(colaborador.SALARIO); 
     const pcd = colaborador.PCD || 'NÃO'; 
     const telefone = colaborador.CONTATO || ''; 
     const telEmergencia = colaborador['CONT FAMILIAR'] || ''; 
-    
     const turno = corrigirStringQuebrada(colaborador.TURNO) || '';
     const lider = corrigirStringQuebrada(colaborador.LIDER) || '';
-    
     const ultimaFuncao = corrigirStringQuebrada(colaborador.CARGO_ANTIGO) || '';
     const dataPromocao = formatarDataExcel(colaborador['DATA DA PROMOCAO']);
-
-    // ======== LÓGICA DO BADGE DE CLASSIFICAÇÃO ========
     const classificacao = colaborador.CLASSIFICACAO || 'SEM';
-    let classificacaoClass = '';
 
-    switch (classificacao.toUpperCase()) {
-        case 'DESLIGAR':
-            classificacaoClass = 'classificacao-desligar';
-            break;
-        case 'RECUPERAR':
-            classificacaoClass = 'classificacao-recuperar';
-            break;
-        case 'BOM':
-            classificacaoClass = 'classificacao-bom';
-            break;
-        case 'MUITO BOM':
-            classificacaoClass = 'classificacao-muito-bom';
-            break;
-        case 'PREPARAR':
-            classificacaoClass = 'classificacao-preparar';
-            break;
-        default:
-            classificacaoClass = 'classificacao-sem'; // Para 'SEM' e outros
+    let classificacaoClass = 'classificacao-sem';
+    if (classificacao) {
+        const c = classificacao.toUpperCase();
+        if (c === 'DESLIGAR') classificacaoClass = 'classificacao-desligar';
+        else if (c === 'RECUPERAR') classificacaoClass = 'classificacao-recuperar';
+        else if (c === 'BOM') classificacaoClass = 'classificacao-bom';
+        else if (c === 'MUITO BOM') classificacaoClass = 'classificacao-muito-bom';
+        else if (c === 'PREPARAR') classificacaoClass = 'classificacao-preparar';
     }
-    // ==============================================
     
     let statusClass = '';
-    if (status.toUpperCase() === 'ATIVO') {
-        statusClass = 'status-ativo';
-    } else if (status.toUpperCase() === 'AFASTADO' || status.toUpperCase() === 'AFASTAMENTO') {
-        statusClass = 'status-afastado';
-    } else if (status.toUpperCase() === 'DESLIGADOS' || status.toUpperCase() === 'DESPEDIDA') {
-        statusClass = 'status-desligados';
-    }
+    if (status.toUpperCase() === 'ATIVO') statusClass = 'status-ativo';
+    else if (status.toUpperCase().includes('AFASTADO')) statusClass = 'status-afastado';
+    else if (status.toUpperCase().includes('DESLIGADO')) statusClass = 'status-desligados';
+
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
     
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
-                <img src="avatar-placeholder.png" alt="Foto de ${nome}">
+                <img src="avatar-placeholder.png" alt="Foto">
                 <div class="header-info">
                     <h3>${nome}</h3>
                     <span class="status-badge ${statusClass}">${status}</span>
@@ -581,7 +338,6 @@ function criarCardColaborador(colaborador) {
                 <p><strong>LIDER IMEDIATO:</strong> <span>${lider}</span></p>
                 <p><strong>ULTIMA FUNÇÃO:</strong> <span>${ultimaFuncao}</span></p>
                 <p><strong>DATA ULTIMA PROMOÇÃO:</strong> <span>${dataPromocao}</span></p>
-                
                 <p><strong>CLASSIFICAÇÃO CICLO DE GENTE:</strong> <span class="classificacao-badge ${classificacaoClass}">${classificacao}</span></p>
                 <p><strong>HISTORICO DE ADVERTENCIAS:</strong> <span></span></p>
                 <p><strong>HISTORICO DE SUSPENSÃO:</strong> <span></span></p>
@@ -590,608 +346,264 @@ function criarCardColaborador(colaborador) {
                 <p><strong>QTD INTRAJORNADA:</strong> <span></span></p>
                 <p><strong>PROGRAMAÇÃO FÉRIAS:</strong> <span></span></p>
             </div>
+            <div class="card-footer" onclick="abrirModalDetalhes(${index})">
+                <span class="material-icons-outlined expand-icon">keyboard_arrow_down</span>
+            </div>
         </div>
     `;
 }
 
-// 6. Funções de População de Filtros (Visão Geral)
+// 6 a 10. Funções Auxiliares (Filtros, Metas, Gráficos) - Mantidas Simplificadas
 async function popularFiltrosDinamicos() {
-    // ======== VERIFICA O NOVO FILTRO ========
-    if (!filterArea || !filterLider || !filterClassificacao) { 
-        return;
-    }
-    
-    const { data, error } = await supabaseClient
-        .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE, LIDER, CLASSIFICACAO'); // ======== BUSCA A NOVA COLUNA ========
+    if (!filterArea) return;
+    const { data } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, LIDER, CLASSIFICACAO');
+    if (!data) return;
 
-    if (error) {
-        console.error('Erro ao buscar dados para filtros:', error);
-        return;
-    }
+    const areas = [...new Set(data.map(d => d.ATIVIDADE).filter(Boolean))].sort();
+    const lideres = [...new Set(data.map(d => d.LIDER).filter(Boolean))].sort();
+    const classif = [...new Set(data.map(d => d.CLASSIFICACAO).filter(Boolean))].sort();
 
-    // --- Popula Áreas (sem mudança) ---
-    const areasMap = new Map();
-    data.forEach(item => {
-        if (item.ATIVIDADE) {
-            areasMap.set(item.ATIVIDADE, corrigirStringQuebrada(item.ATIVIDADE));
-        }
-    });
-    const sortedAreas = [...areasMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-    
-    filterArea.innerHTML = '<option value="">Toda Área</option>';
-    
-    sortedAreas.forEach(([original, corrigido]) => {
-        filterArea.innerHTML += `<option value="${original}">${corrigido}</option>`;
-    });
-    
-    // --- Popula Líderes (sem mudança) ---
-    const lideresMap = new Map();
-    data.forEach(item => {
-        if (item.LIDER) {
-            lideresMap.set(item.LIDER, corrigirStringQuebrada(item.LIDER));
-        }
-    });
-    const sortedLideres = [...lideresMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-    
-    filterLider.innerHTML = '<option value="">Todo Líder</option>';
-    
-    sortedLideres.forEach(([original, corrigido]) => {
-        filterLider.innerHTML += `<option value="${original}">${corrigido}</option>`;
-    });
-
-    // ======== LÓGICA PARA POPULAR O NOVO FILTRO ========
-    const classificacoesMap = new Map();
-    data.forEach(item => {
-        if (item.CLASSIFICACAO) {
-            // Não precisa de correção, usa o valor direto
-            classificacoesMap.set(item.CLASSIFICACAO, item.CLASSIFICACAO);
-        }
-    });
-    // Ordena alfabeticamente
-    const sortedClassificacoes = [...classificacoesMap.keys()].sort(); 
-    
-    filterClassificacao.innerHTML = '<option value="">Toda Classificação</option>';
-    
-    sortedClassificacoes.forEach(classif => {
-        filterClassificacao.innerHTML += `<option value="${classif}">${classif}</option>`;
-    });
-    // ==================================================
+    filterArea.innerHTML = '<option value="">Toda Área</option>' + areas.map(a => `<option value="${a}">${corrigirStringQuebrada(a)}</option>`).join('');
+    filterLider.innerHTML = '<option value="">Todo Líder</option>' + lideres.map(l => `<option value="${l}">${corrigirStringQuebrada(l)}</option>`).join('');
+    filterClassificacao.innerHTML = '<option value="">Toda Classificação</option>' + classif.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
-
-// 7. Funções do "Painel de Gestão"
 async function popularDropdownMetas() {
-    if (!metaAreaSelect) {
-        return;
-    }
-    
-    const { data, error } = await supabaseClient
-        .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE'); // Otimizado
-    
-    if (error) {
-        console.error('Erro ao buscar áreas para o dropdown de metas:', error);
-        return;
-    }
-    
-    // MODIFICAÇÃO: Lógica de preenchimento do dropdown corrigida
-    const areasMap = new Map();
-    data.forEach(item => {
-        if (item.ATIVIDADE) {
-            areasMap.set(item.ATIVIDADE, corrigirStringQuebrada(item.ATIVIDADE));
-        }
-    });
-    
-    metaAreaSelect.innerHTML = '<option value="">Selecione uma área...</option>';
-    
-    const sortedAreas = [...areasMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-    sortedAreas.forEach(([original, corrigido]) => {
-        // O 'value' é o original (quebrado) para salvar no banco
-        // O texto (innerHTML) é o corrigido (para o usuário ver)
-        metaAreaSelect.innerHTML += `<option value="${original}">${corrigido}</option>`;
-    });
+    if (!metaAreaSelect) return;
+    const { data } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE');
+    if (!data) return;
+    const areas = [...new Set(data.map(d => d.ATIVIDADE).filter(Boolean))].sort();
+    metaAreaSelect.innerHTML = '<option value="">Selecione...</option>' + areas.map(a => `<option value="${a}">${corrigirStringQuebrada(a)}</option>`).join('');
 }
 
 async function handleMetaSubmit(e) {
     e.preventDefault();
-    const areaSelecionada = metaAreaSelect.value; // Isto vai pegar o valor original (quebrado), o que é CORRETO
-    
-    // Pega todos os valores (ou null se estiver vazio)
-    const metaValor = metaValorInput.value ? parseInt(metaValorInput.value) : null;
-    const metaPCDValor = metaPCDInput.value ? parseInt(metaPCDInput.value) : null;
-    const metaJovemValor = metaJovemInput.value ? parseInt(metaJovemInput.value) : null;
-
-    if (!areaSelecionada) {
-        alert('Por favor, selecione uma área.');
-        return;
-    }
     metaSubmitButton.disabled = true;
-    metaSubmitButton.textContent = 'Salvando...';
-    metaSuccessMessage.style.visibility = 'hidden';
-    
-    // O upsert usará a string original (ex: 'DISTRIBUIO URBANA')
-    const { error } = await supabaseClient
-        .from(NOME_TABELA_METAS)
-        .upsert(
-            { 
-                area: areaSelecionada, 
-                meta: metaValor,
-                meta_pcd: metaPCDValor,
-                meta_jovem: metaJovemValor
-            },
-            { onConflict: 'area' } // Chave do conflito é a 'area'
-        );
-        
+    const { error } = await supabaseClient.from(NOME_TABELA_METAS).upsert({ 
+        area: metaAreaSelect.value, 
+        meta: metaValorInput.value || null,
+        meta_pcd: metaPCDInput.value || null,
+        meta_jovem: metaJovemInput.value || null
+    }, { onConflict: 'area' });
     metaSubmitButton.disabled = false;
-    metaSubmitButton.textContent = 'Salvar Metas';
-    if (error) {
-        console.error('Erro ao salvar meta:', error);
-        alert('Erro ao salvar a meta. Verifique o console.'); 
-    } else {
+    if (!error) {
         metaSuccessMessage.style.visibility = 'visible';
-        setTimeout(() => { metaSuccessMessage.style.visibility = 'hidden'; }, 3000);
+        setTimeout(() => metaSuccessMessage.style.visibility = 'hidden', 3000);
         metaForm.reset();
-        carregarRelatorioMetas(); // Atualiza a tabela
-    }
+        carregarRelatorioMetas();
+    } else alert('Erro ao salvar.');
 }
 
-
-// ======== 8. FUNÇÃO MESTRA DE BUSCA DE DADOS (ATUALIZADA) ========
-// Esta função centraliza a busca e processamento de dados
 async function fetchProcessedData() {
-    // Passo 1: Buscar as Metas
-    const { data: metasData, error: metasError } = await supabaseClient
-        .from(NOME_TABELA_METAS)
-        .select('area, meta, meta_pcd, meta_jovem'); // Busca todas as metas
-        
-    if (metasError) {
-        console.error('Erro ao buscar metas:', metasError);
-        return { error: metasError };
-    }
-    // Converte o array de metas em um objeto (map) para fácil acesso
-    const metasMap = metasData.reduce((acc, item) => {
-        acc[item.area] = item; // Chave é a área, valor é o objeto {area, meta, meta_pcd, ...}
-        return acc;
-    }, {});
-
-    // Passo 2: Buscar Dados Reais (colaboradores)
-    const { data: qlpData, error: qlpError } = await supabaseClient
-        .from(NOME_TABELA_QLP)
-        .select('ATIVIDADE, SITUACAO, PCD, "CARGO ATUAL"'); // Busca só colunas necessárias
-        
-    if (qlpError) {
-        console.error('Erro ao buscar QLP para contagem:', qlpError);
-        return { error: qlpError };
-    }
+    const { data: metas } = await supabaseClient.from(NOME_TABELA_METAS).select('*');
+    const { data: qlp } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, SITUACAO, PCD, "CARGO ATUAL"');
     
-    // Passo 3: Criar lista mestre de todas as áreas
-    const todasAreasUnicas = qlpData.reduce((acc, { ATIVIDADE }) => {
-        if (ATIVIDADE) {
-            acc.add(ATIVIDADE);
-        }
-        return acc;
-    }, new Set());
+    if (!qlp) return { error: true };
+    
+    const metasMap = (metas || []).reduce((acc, m) => ({...acc, [m.area]: m}), {});
+    const areas = [...new Set([...qlp.map(d => d.ATIVIDADE).filter(Boolean), ...Object.keys(metasMap)])].sort();
+    const realMap = {};
+    const ativos = qlp.filter(c => c.SITUACAO && c.SITUACAO.toUpperCase() === 'ATIVO');
 
-    // Combina áreas do QLP com áreas que podem ter só meta (sem funcionário)
-    const todasAreas = [...new Set([
-        ...todasAreasUnicas,
-        ...Object.keys(metasMap)
-    ])].sort();
-
-    // Passo 4: Calcular o "Real" para cada área
-    const realMap = {}; // Objeto para guardar os contadores
-
-    // Filtra apenas colaboradores "ATIVO" (com segurança)
-    const ativos = qlpData.filter(col => col.SITUACAO && col.SITUACAO.toUpperCase() === 'ATIVO');
-
-    // Inicializa o mapa para todas as áreas
-    todasAreas.forEach(area => {
-        realMap[area] = { qlp: 0, pcd: 0, jovem: 0 };
-    });
-
-    // Processa os colaboradores ativos e incrementa os contadores
-    ativos.forEach(col => {
-        const area = col.ATIVIDADE;
-        if (!area || !realMap[area]) {
-            return; // Ignora se a área for nula ou não estiver na lista mestre
-        }
-
-        // 1. Contador QLP Total
-        realMap[area].qlp++;
-
-        // 2. Contador PCD
-        if (col.PCD && col.PCD.toUpperCase() === 'SIM') {
-            realMap[area].pcd++;
-        }
-
-        // 3. Contador Jovem Aprendiz
-        // (Ajuste a string "JOVEM APRENDIZ" se o cargo for outro)
-        const cargoAtual = col['CARGO ATUAL'] || ''; // Garante que não é nulo
-        if (cargoAtual.toUpperCase().includes('JOVEM APRENDIZ')) {
-            realMap[area].jovem++;
+    areas.forEach(a => realMap[a] = { qlp: 0, pcd: 0, jovem: 0 });
+    ativos.forEach(c => {
+        if (realMap[c.ATIVIDADE]) {
+            realMap[c.ATIVIDADE].qlp++;
+            if (c.PCD === 'SIM') realMap[c.ATIVIDADE].pcd++;
+            if ((c['CARGO ATUAL']||'').includes('JOVEM APRENDIZ')) realMap[c.ATIVIDADE].jovem++;
         }
     });
-    
-    // ======== MUDANÇA: Calcular o Total de Ativos ========
-    const totalAtivos = ativos.length;
-    // ===================================================
-    
-    return { todasAreas, metasMap, realMap, totalAtivos, error: null };
+    return { areas, metasMap, realMap, totalAtivos: ativos.length, error: null };
 }
 
-
-// ======== 9. FUNÇÕES DO PAINEL DE GESTÃO E GRÁFICOS (ATUALIZADAS) ========
-
-// ======== ATUALIZADO: carregarRelatorioMetas (agora preenche 3 tabelas e as cotas) ========
 async function carregarRelatorioMetas() {
-    // Verifica se os 3 tbodys existem
-    if (!reportTableBodyQLP || !reportTableBodyPCD || !reportTableBodyJovem) {
-        console.error("Tabelas de relatório (tbody) não encontradas.");
-        return;
-    }
-    // Define "Carregando" para as 3 tabelas
-    reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
-    reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
-    reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Carregando relatório...</td></tr>`;
-    
-    // Busca os dados, incluindo o novo totalAtivos
-    const { todasAreas, metasMap, realMap, totalAtivos, error } = await fetchProcessedData();
+    if (!reportTableBodyQLP) return;
+    reportTableBodyQLP.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
+    const { areas, metasMap, realMap, totalAtivos, error } = await fetchProcessedData();
+    if (error) return;
 
-    if (error) {
-        reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
-        reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
-        reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Erro ao carregar dados.</td></tr>`;
-        return;
-    }
+    // Atualiza Cotas
+    document.getElementById('quota-pcd-value').textContent = Math.ceil(totalAtivos * (totalAtivos > 1000 ? 0.05 : 0.02));
+    document.getElementById('quota-jovem-value').textContent = Math.ceil(totalAtivos * 0.05);
 
-    // ======== MUDANÇA: Calcular e Exibir Cotas ========
-    let metaPCDCalculada = 0;
-    if (totalAtivos >= 100 && totalAtivos <= 200) {
-        metaPCDCalculada = totalAtivos * 0.02;
-    } else if (totalAtivos >= 201 && totalAtivos <= 500) {
-        metaPCDCalculada = totalAtivos * 0.03;
-    } else if (totalAtivos >= 501 && totalAtivos <= 1000) {
-        metaPCDCalculada = totalAtivos * 0.04;
-    } else if (totalAtivos > 1000) {
-        metaPCDCalculada = totalAtivos * 0.05;
-    }
-    
-    // Arredonda para cima (cota legal)
-    metaPCDCalculada = Math.ceil(metaPCDCalculada);
-
-    // Cota Jovem: 5% do QLP Total (total de ativos)
-    let metaJovemCalculada = totalAtivos * 0.05;
-    // Arredonda para cima (cota legal)
-    metaJovemCalculada = Math.ceil(metaJovemCalculada);
-
-    // Atualiza os elementos HTML
-    const quotaPCDElement = document.getElementById('quota-pcd-value');
-    const quotaJovemElement = document.getElementById('quota-jovem-value');
-
-    if (quotaPCDElement) {
-        quotaPCDElement.textContent = metaPCDCalculada;
-    }
-    if (quotaJovemElement) {
-        quotaJovemElement.textContent = metaJovemCalculada;
-    }
-    // =================================================
-    
-    if (todasAreas.length === 0) {
-        reportTableBodyQLP.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
-        reportTableBodyPCD.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
-        reportTableBodyJovem.innerHTML = `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
-        return;
-    }
-    
-    let qlpHTML = '';
-    let pcdHTML = '';
-    let jovemHTML = '';
-
-    todasAreas.forEach(area => {
-        const metaObj = metasMap[area] || {};
-        const realObj = realMap[area] || { qlp: 0, pcd: 0, jovem: 0 };
-        const areaCorrigida = corrigirStringQuebrada(area);
-
-        const metaQLP = metaObj.meta || 0;
-        const realQLP = realObj.qlp;
-        
-        const metaPCD = metaObj.meta_pcd || 0;
-        const realPCD = realObj.pcd;
-        
-        const metaJovem = metaObj.meta_jovem || 0;
-        const realJovem = realObj.jovem;
-
-        // Tabela 1: QLP Total (Sempre mostra todas as áreas)
-        qlpHTML += `
-            <tr>
-                <td>${areaCorrigida}</td> 
-                <td>${metaQLP}</td>
-                <td>${realQLP}</td>
-            </tr>
-        `;
-
-        // Tabela 2: PCD (Só mostra se meta > 0 ou real > 0)
-        if (metaPCD > 0 || realPCD > 0) {
-            pcdHTML += `
-                <tr>
-                    <td>${areaCorrigida}</td> 
-                    <td>${metaPCD}</td>
-                    <td>${realPCD}</td>
-                </tr>
-            `;
-        }
-        
-        // Tabela 3: Jovem Aprendiz (Só mostra se meta > 0 ou real > 0)
-        if (metaJovem > 0 || realJovem > 0) {
-            jovemHTML += `
-                <tr>
-                    <td>${areaCorrigida}</td> 
-                    <td>${metaJovem}</td>
-                    <td>${realJovem}</td>
-                </tr>
-            `;
-        }
+    let htmlQLP = '', htmlPCD = '', htmlJovem = '';
+    areas.forEach(a => {
+        const m = metasMap[a] || {};
+        const r = realMap[a];
+        const nome = corrigirStringQuebrada(a);
+        htmlQLP += `<tr><td>${nome}</td><td>${m.meta||0}</td><td>${r.qlp}</td></tr>`;
+        if (m.meta_pcd || r.pcd) htmlPCD += `<tr><td>${nome}</td><td>${m.meta_pcd||0}</td><td>${r.pcd}</td></tr>`;
+        if (m.meta_jovem || r.jovem) htmlJovem += `<tr><td>${nome}</td><td>${m.meta_jovem||0}</td><td>${r.jovem}</td></tr>`;
     });
-
-    // Define o HTML final
-    reportTableBodyQLP.innerHTML = qlpHTML || `<tr><td colspan="3">Nenhuma área encontrada.</td></tr>`;
-    reportTableBodyPCD.innerHTML = pcdHTML || `<tr><td colspan="3">Nenhuma meta ou colaborador PCD encontrado.</td></tr>`;
-    reportTableBodyJovem.innerHTML = jovemHTML || `<tr><td colspan="3">Nenhuma meta ou Jovem Aprendiz encontrado.</td></tr>`;
+    reportTableBodyQLP.innerHTML = htmlQLP;
+    reportTableBodyPCD.innerHTML = htmlPCD || '<tr><td colspan="3">Vazio</td></tr>';
+    reportTableBodyJovem.innerHTML = htmlJovem || '<tr><td colspan="3">Vazio</td></tr>';
 }
-
-// ------ FUNÇÕES DE GRÁFICO SEPARADAS (AGORA COM TOTAL E NÚMEROS) ------
 
 async function carregarGraficoQLP() {
-    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    const { areas, metasMap, realMap, error } = await fetchProcessedData();
     if (error) return;
-
-    const labels = [];
-    const metaData = [];
-    const realData = [];
-    const gapData = [];
-
-    todasAreas.forEach(area => {
-        const meta = (metasMap[area] && metasMap[area].meta) || 0;
-        const real = (realMap[area] && realMap[area].qlp) || 0;
-        const gap = Math.max(0, meta - real); 
-
-        labels.push(corrigirStringQuebrada(area));
-        metaData.push(meta);
-        realData.push(real);
-        gapData.push(gap);
-    });
-
-    // ======== MUDANÇA: Adicionar "Total" ========
-    if (labels.length > 0) {
-        const totalMeta = metaData.reduce((acc, val) => acc + val, 0);
-        const totalReal = realData.reduce((acc, val) => acc + val, 0);
-        const totalGap = Math.max(0, totalMeta - totalReal);
-
-        labels.push('TOTAL');
-        metaData.push(totalMeta);
-        realData.push(totalReal);
-        gapData.push(totalGap);
-    }
-    // ==========================================
-
-    const ctx = document.getElementById('grafico-metas-qlp').getContext('2d');
-    if (metaChartQLP) {
-        metaChartQLP.destroy();
-    }
-    metaChartQLP = new Chart(ctx, {
-        type: 'bar',
-        // Registra o plugin de labels para este gráfico
-        plugins: [ChartDataLabels], 
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Meta', data: metaData, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
-                { label: 'Real', data: realData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
-                { label: 'Gap (Faltantes)', data: gapData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { 
-                legend: { position: 'top' },
-                // ======== MUDANÇA: Configuração dos Números (Labels) ========
-                datalabels: {
-                    anchor: 'end', // Posição (topo da barra)
-                    align: 'top',
-                    color: '#444',
-                    font: { weight: 'bold' },
-                    formatter: (value) => {
-                        return value > 0 ? value : ''; // Só mostra se for maior que 0
-                    }
-                }
-                // ========================================================
-            },
-            scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Nº de Colaboradores' } },
-                x: { title: { display: true, text: 'Áreas' } }
-            }
-        }
-    });
+    renderChart('grafico-metas-qlp', areas, metasMap, realMap, 'meta', 'qlp', 'Colaboradores', metaChartQLP);
 }
-
 async function carregarGraficoPCD() {
-    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    const { areas, metasMap, realMap, error } = await fetchProcessedData();
     if (error) return;
-
-    const labels = [];
-    const metaData = [];
-    const realData = [];
-    const gapData = [];
-
-    todasAreas.forEach(area => {
-        const meta = (metasMap[area] && metasMap[area].meta_pcd) || 0;
-        const real = (realMap[area] && realMap[area].pcd) || 0;
-        const gap = Math.max(0, meta - real);
-
-        // Só adiciona ao gráfico se houver meta ou real (para não poluir)
-        if (meta > 0 || real > 0) {
-            labels.push(corrigirStringQuebrada(area));
-            metaData.push(meta);
-            realData.push(real);
-            gapData.push(gap);
-        }
-    });
-
-    // ======== MUDANÇA: Adicionar "Total" ========
-    if (labels.length > 0) {
-        const totalMeta = metaData.reduce((acc, val) => acc + val, 0);
-        const totalReal = realData.reduce((acc, val) => acc + val, 0);
-        const totalGap = Math.max(0, totalMeta - totalReal);
-
-        labels.push('TOTAL');
-        metaData.push(totalMeta);
-        realData.push(totalReal);
-        gapData.push(totalGap);
-    }
-    // ==========================================
-
-    const ctx = document.getElementById('grafico-metas-pcd').getContext('2d');
-    if (metaChartPCD) {
-        metaChartPCD.destroy();
-    }
-    metaChartPCD = new Chart(ctx, {
-        type: 'bar',
-        plugins: [ChartDataLabels], // Registra o plugin de labels
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'Meta PCD', data: metaData, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
-                { label: 'Real PCD', data: realData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
-                { label: 'Gap (Faltantes)', data: gapData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { 
-                legend: { position: 'top' },
-                // ======== MUDANÇA: Configuração dos Números (Labels) ========
-                datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    color: '#444',
-                    font: { weight: 'bold' },
-                    formatter: (value) => {
-                        return value > 0 ? value : ''; // Só mostra se for maior que 0
-                    }
-                }
-                // ========================================================
-            },
-            scales: {
-                y: { 
-                    beginAtZero: true, 
-                    title: { display: true, text: 'Nº de Colaboradores PCD' },
-                    // Garante que o eixo Y mostre números inteiros (ex: 1, 2, 3)
-                    ticks: {
-                        stepSize: 1 
-                    }
-                },
-                x: { title: { display: true, text: 'Áreas' } }
-            }
-        }
-    });
+    renderChart('grafico-metas-pcd', areas, metasMap, realMap, 'meta_pcd', 'pcd', 'PCD', metaChartPCD, true);
 }
-
 async function carregarGraficoJovemAprendiz() {
-    const { todasAreas, metasMap, realMap, error } = await fetchProcessedData();
+    const { areas, metasMap, realMap, error } = await fetchProcessedData();
     if (error) return;
+    renderChart('grafico-metas-jovem', areas, metasMap, realMap, 'meta_jovem', 'jovem', 'Jovem', metaChartJovem, true);
+}
 
-    const labels = [];
-    const metaData = [];
-    const realData = [];
-    const gapData = [];
-
-    todasAreas.forEach(area => {
-        const meta = (metasMap[area] && metasMap[area].meta_jovem) || 0;
-        const real = (realMap[area] && realMap[area].jovem) || 0;
-        const gap = Math.max(0, meta - real);
-
-        // Só adiciona ao gráfico se houver meta ou real (para não poluir)
-        if (meta > 0 || real > 0) {
-            labels.push(corrigirStringQuebrada(area));
-            metaData.push(meta);
-            realData.push(real);
-            gapData.push(gap);
+function renderChart(canvasId, areas, metas, reais, keyMeta, keyReal, label, chartInstance, filterEmpty=false) {
+    const labels = [], dMeta = [], dReal = [], dGap = [];
+    areas.forEach(a => {
+        const m = (metas[a] && metas[a][keyMeta]) || 0;
+        const r = reais[a][keyReal];
+        if (!filterEmpty || m > 0 || r > 0) {
+            labels.push(corrigirStringQuebrada(a));
+            dMeta.push(m);
+            dReal.push(r);
+            dGap.push(Math.max(0, m - r));
         }
     });
-
-    // ======== MUDANÇA: Adicionar "Total" ========
-    if (labels.length > 0) {
-        const totalMeta = metaData.reduce((acc, val) => acc + val, 0);
-        const totalReal = realData.reduce((acc, val) => acc + val, 0);
-        const totalGap = Math.max(0, totalMeta - totalReal);
-
+    if (labels.length) {
         labels.push('TOTAL');
-        metaData.push(totalMeta);
-        realData.push(totalReal);
-        gapData.push(totalGap);
+        dMeta.push(dMeta.reduce((a,b)=>a+b,0));
+        dReal.push(dReal.reduce((a,b)=>a+b,0));
+        dGap.push(dGap.reduce((a,b)=>a+b,0));
     }
-    // ==========================================
-
-    const ctx = document.getElementById('grafico-metas-jovem').getContext('2d');
-    if (metaChartJovem) {
-        metaChartJovem.destroy();
-    }
-    metaChartJovem = new Chart(ctx, {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    
+    new Chart(ctx, {
         type: 'bar',
-        plugins: [ChartDataLabels], // Registra o plugin de labels
+        plugins: [ChartDataLabels],
         data: {
             labels: labels,
             datasets: [
-                { label: 'Meta Jovem Aprendiz', data: metaData, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
-                { label: 'Real Jovem Aprendiz', data: realData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
-                { label: 'Gap (Faltantes)', data: gapData, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
+                { label: 'Meta', data: dMeta, backgroundColor: 'rgba(54, 162, 235, 0.6)' },
+                { label: 'Real', data: dReal, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+                { label: 'Gap', data: dGap, backgroundColor: 'rgba(255, 99, 132, 0.6)' }
             ]
         },
         options: {
             responsive: true,
-            plugins: { 
-                legend: { position: 'top' },
-                // ======== MUDANÇA: Configuração dos Números (Labels) ========
-                datalabels: {
-                    anchor: 'end',
-                    align: 'top',
-                    color: '#444',
-                    font: { weight: 'bold' },
-                    formatter: (value) => {
-                        return value > 0 ? value : ''; // Só mostra se for maior que 0
-                    }
-                }
-                // ========================================================
-            },
-            scales: {
-                y: { 
-                    beginAtZero: true, 
-                    title: { display: true, text: 'Nº de Jovens Aprendizes' },
-                    // Garante que o eixo Y mostre números inteiros (ex: 1, 2, 3)
-                    ticks: {
-                        stepSize: 1 
-                    }
-                },
-                x: { title: { display: true, text: 'Áreas' } }
-            }
+            plugins: { datalabels: { anchor: 'end', align: 'top', formatter: v => v>0?v:'' } },
+            scales: { y: { beginAtZero: true } }
         }
     });
 }
 
+// ======== FUNÇÃO NOVA: GERAR HTML DO PDI ========
+function gerarHtmlPDI(colab) {
+    let html = `
+        <div class="pdi-section">
+            <h3>Ciclo de Gente - Plano de Desenvolvimento</h3>
+            <div class="pdi-container">
+    `;
+    
+    let encontrouAlgum = false;
 
+    // Loop de 1 a 7 para verificar as colunas
+    for (let i = 1; i <= 7; i++) {
+        const competencia = colab[`COMPETENCIA_${i}`];
+        
+        // Se tiver competência preenchida, cria o card
+        if (competencia) {
+            encontrouAlgum = true;
+            const status = colab[`STATUS_${i}`] || 'Pendente';
+            const situacao = colab[`SITUACAO_DA_ACAO_${i}`] || '-';
+            const acao = colab[`O_QUE_FAZER_${i}`] || '-';
+            const motivo = colab[`POR_QUE_FAZER_${i}`] || '-';
+            const quem = colab[`QUE_PODE_ME_AJUDAR_${i}`] || '-';
+            const como = colab[`COMO_VOU_FAZER_${i}`] || '-';
+            const dataFim = formatarDataExcel(colab[`DATA_DE_TERMINO_${i}`]);
 
-// ======== 10. Auth Guard (Proteção da Página com sessionStorage) ========
-(function() {
-    if (sessionStorage.getItem('usuarioLogado') !== 'true') {
-        window.location.href = 'login.html';
-    } else {
-        // Se houver sessão, o usuário está logado.
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupDashboard);
-        } else {
-            // DOM já está pronto!
-            setupDashboard();
+            html += `
+                <div class="pdi-card" data-status="${status.toUpperCase()}">
+                    <h4>${i}. ${competencia}</h4>
+                    <div class="pdi-details">
+                        <div class="pdi-item"><strong>Situação Atual</strong> <span>${situacao}</span></div>
+                        <div class="pdi-item"><strong>Ação (O que fazer)</strong> <span>${acao}</span></div>
+                        <div class="pdi-item"><strong>Motivo (Por que)</strong> <span>${motivo}</span></div>
+                        <div class="pdi-item"><strong>Apoio (Quem ajuda)</strong> <span>${quem}</span></div>
+                        <div class="pdi-item"><strong>Método (Como)</strong> <span>${como}</span></div>
+                        <div class="pdi-item"><strong>Prazo</strong> <span>${dataFim}</span></div>
+                        <div class="pdi-item"><strong>Status</strong> <span>${status}</span></div>
+                    </div>
+                </div>
+            `;
         }
+    }
+
+    if (!encontrouAlgum) {
+        html += `<p style="color:#666; padding:10px;">Nenhum plano de ação cadastrado para este ciclo.</p>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+}
+
+// ======== FUNÇÃO DO MODAL ATUALIZADA ========
+function abrirModalDetalhes(index) {
+    const colab = listaColaboradoresGlobal[index];
+    if (!colab) return;
+
+    const modal = document.getElementById('modal-detalhes');
+    const header = document.getElementById('modal-header');
+    const grid = document.getElementById('modal-dados-grid');
+
+    const nome = corrigirStringQuebrada(colab.NOME);
+    const status = colab.SITUACAO || '';
+
+    // Cabeçalho
+    header.innerHTML = `
+        <img src="avatar-placeholder.png" alt="${nome}">
+        <div>
+            <h2 style="margin:0; font-size:1.5em;">${nome}</h2>
+            <span class="status-badge" style="background-color:rgba(255,255,255,0.2); border:1px solid #fff; margin-top:5px;">${status}</span>
+        </div>
+    `;
+
+    // Dados Pessoais (Grid padrão)
+    grid.innerHTML = `
+        <div class="modal-item"><strong>CPF</strong> <span>${formatarCPF(colab.CPF)}</span></div>
+        <div class="modal-item"><strong>Matrícula</strong> <span>${colab.MATRICULA || '-'}</span></div>
+        <div class="modal-item"><strong>Função</strong> <span>${corrigirStringQuebrada(colab['CARGO ATUAL'])}</span></div>
+        <div class="modal-item"><strong>Área</strong> <span>${corrigirStringQuebrada(colab.ATIVIDADE)}</span></div>
+        <div class="modal-item"><strong>Salário</strong> <span>${formatarSalario(colab.SALARIO)}</span></div>
+        <div class="modal-item"><strong>Tempo de Casa</strong> <span>${formatarTempoDeEmpresa(colab['TEMPO DE EMPRESA'])}</span></div>
+        <div class="modal-item"><strong>Escolaridade</strong> <span>${corrigirStringQuebrada(colab.ESCOLARIDADE)}</span></div>
+        <div class="modal-item"><strong>PCD</strong> <span>${colab.PCD || 'NÃO'}</span></div>
+        <div class="modal-item"><strong>Líder</strong> <span>${corrigirStringQuebrada(colab.LIDER)}</span></div>
+        <div class="modal-item"><strong>Turno</strong> <span>${corrigirStringQuebrada(colab.TURNO)}</span></div>
+        <div class="modal-item"><strong>CLASSIFICAÇÃO CICLO DE GENTE</strong> <span>${colab.CLASSIFICACAO || '-'}</span></div>
+        <div class="modal-item"><strong>DATA ULTIMA PROMOÇÃO</strong> <span>${colab.dataPromocao || '-'}</span></div>
+        <div class="modal-item" style="grid-column: 1/-1; background:#f9f9f9; padding:10px; border-radius:4px;">
+        </div>
+        
+        ${gerarHtmlPDI(colab)}
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function fecharModal() {
+    document.getElementById('modal-detalhes').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('modal-detalhes');
+    if (event.target == modal) modal.style.display = "none";
+};
+
+// 11. Auth Guard
+;(function() {
+    if (sessionStorage.getItem('usuarioLogado') !== 'true') window.location.href = 'login.html';
+    else {
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupDashboard);
+        else setupDashboard();
     }
 })();
