@@ -6,22 +6,13 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ======== FUNÇÃO DE CORREÇÃO ATUALIZADA (LIMPA OS  DA IMAGEM) ========
+// ======== FUNÇÃO DE CORREÇÃO (VERSÃO 9 - GATILHO CORRIGIDO + NOVAS REGRAS) ========
 function corrigirStringQuebrada(texto) {
-    if (typeof texto !== 'string' || !texto) return texto;
+    if (typeof texto !== 'string' || !texto) {
+        return texto;
+    }
 
-    // Se tiver o caractere '' ou estiver quebrado
-    if (texto.includes('') || texto.includes('')) { 
-        // Correções Genéricas (baseadas na sua imagem)
-        if (texto.includes('PRIORIZA')) return texto.replace(/PRIORIZAO/g, 'PRIORIZAÇÃO').replace(/PRIORIZA..O/g, 'PRIORIZAÇÃO');
-        if (texto.includes('GEST') && texto.includes('O')) return texto.replace(/GEST..O/g, 'GESTÃO').replace(/GESTO/g, 'GESTÃO');
-        if (texto.includes('AO')) return texto.replace(/AO/g, 'AÇÃO');
-        if (texto.includes('AES')) return texto.replace(/AES/g, 'AÇÕES');
-        if (texto.includes('COMUNICA')) return texto.replace(/COMUNICA..O/g, 'COMUNICAÇÃO');
-        if (texto.includes('360')) return texto.replace(/360/g, '360°').replace(/360../g, '360°');
-        if (texto.includes('S')) return texto.replace(/S/g, 'ÀS'); // 7h ÀS 8h
-        
-        // Correções de Cargos Antigos
+    if (texto.includes('')) { 
         if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) return 'DISTRIBUIÇÃO URBANA';
         if (texto.includes('Ajudante') && texto.includes('Distribui')) return 'Ajudante Distribuição';
         if (texto.includes('Analista') && texto.includes('Opera')) return 'Analista Operações';
@@ -321,7 +312,6 @@ function criarCardColaborador(colaborador, index) {
 
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
     
-    // RETORNA CARD COMPLETO
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
@@ -363,7 +353,7 @@ function criarCardColaborador(colaborador, index) {
     `;
 }
 
-// 6 a 10. Funções Auxiliares (Filtros, Metas, Gráficos)
+// 6 a 10. Funções Auxiliares (Filtros, Metas, Gráficos) - Mantidas Simplificadas
 async function popularFiltrosDinamicos() {
     if (!filterArea) return;
     const { data } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, LIDER, CLASSIFICACAO');
@@ -407,11 +397,14 @@ async function handleMetaSubmit(e) {
 async function fetchProcessedData() {
     const { data: metas } = await supabaseClient.from(NOME_TABELA_METAS).select('*');
     const { data: qlp } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, SITUACAO, PCD, "CARGO ATUAL"');
+    
     if (!qlp) return { error: true };
+    
     const metasMap = (metas || []).reduce((acc, m) => ({...acc, [m.area]: m}), {});
     const areas = [...new Set([...qlp.map(d => d.ATIVIDADE).filter(Boolean), ...Object.keys(metasMap)])].sort();
     const realMap = {};
     const ativos = qlp.filter(c => c.SITUACAO && c.SITUACAO.toUpperCase() === 'ATIVO');
+
     areas.forEach(a => realMap[a] = { qlp: 0, pcd: 0, jovem: 0 });
     ativos.forEach(c => {
         if (realMap[c.ATIVIDADE]) {
@@ -428,8 +421,11 @@ async function carregarRelatorioMetas() {
     reportTableBodyQLP.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
     const { areas, metasMap, realMap, totalAtivos, error } = await fetchProcessedData();
     if (error) return;
+
+    // Atualiza Cotas
     document.getElementById('quota-pcd-value').textContent = Math.ceil(totalAtivos * (totalAtivos > 1000 ? 0.05 : 0.02));
     document.getElementById('quota-jovem-value').textContent = Math.ceil(totalAtivos * 0.05);
+
     let htmlQLP = '', htmlPCD = '', htmlJovem = '';
     areas.forEach(a => {
         const m = metasMap[a] || {};
@@ -512,17 +508,17 @@ function gerarHtmlPDI(colab) {
 
     // Loop de 1 a 7 para verificar as colunas
     for (let i = 1; i <= 7; i++) {
-        const competencia = corrigirStringQuebrada(colab[`COMPETENCIA_${i}`]); // Corrige nome da competência tb
+        const competencia = colab[`COMPETENCIA_${i}`];
         
         // Se tiver competência preenchida, cria o card
         if (competencia) {
             encontrouAlgum = true;
             const status = colab[`STATUS_${i}`] || 'Pendente';
-            const situacao = corrigirStringQuebrada(colab[`SITUACAO_DA_ACAO_${i}`]) || '-';
-            const acao = corrigirStringQuebrada(colab[`O_QUE_FAZER_${i}`]) || '-';
-            const motivo = corrigirStringQuebrada(colab[`POR_QUE_FAZER_${i}`]) || '-';
-            const quem = corrigirStringQuebrada(colab[`QUE_PODE_ME_AJUDAR_${i}`]) || '-';
-            const como = corrigirStringQuebrada(colab[`COMO_VOU_FAZER_${i}`]) || '-';
+            const situacao = colab[`SITUACAO_DA_ACAO_${i}`] || '-';
+            const acao = colab[`O_QUE_FAZER_${i}`] || '-';
+            const motivo = colab[`POR_QUE_FAZER_${i}`] || '-';
+            const quem = colab[`QUE_PODE_ME_AJUDAR_${i}`] || '-';
+            const como = colab[`COMO_VOU_FAZER_${i}`] || '-';
             const dataFim = formatarDataExcel(colab[`DATA_DE_TERMINO_${i}`]);
 
             html += `
@@ -562,7 +558,7 @@ function abrirModalDetalhes(index) {
     const nome = corrigirStringQuebrada(colab.NOME);
     const status = colab.SITUACAO || '';
 
-    // Cabeçalho do Modal
+    // Cabeçalho
     header.innerHTML = `
         <img src="avatar-placeholder.png" alt="${nome}">
         <div>
@@ -571,7 +567,7 @@ function abrirModalDetalhes(index) {
         </div>
     `;
 
-    // Dados Pessoais + PDI
+    // Dados Pessoais (Grid padrão)
     grid.innerHTML = `
         <div class="modal-item"><strong>CPF</strong> <span>${formatarCPF(colab.CPF)}</span></div>
         <div class="modal-item"><strong>Matrícula</strong> <span>${colab.MATRICULA || '-'}</span></div>
@@ -585,7 +581,9 @@ function abrirModalDetalhes(index) {
         <div class="modal-item"><strong>Turno</strong> <span>${corrigirStringQuebrada(colab.TURNO)}</span></div>
         <div class="modal-item"><strong>CLASSIFICAÇÃO CICLO DE GENTE</strong> <span>${colab.CLASSIFICACAO || '-'}</span></div>
         <div class="modal-item"><strong>DATA ULTIMA PROMOÇÃO</strong> <span>${colab.dataPromocao || '-'}</span></div>
-        <div class="modal-item" style="grid-column: 1/-1; background:#f9f9f9; padding:10px; border-radius:4px;">    
+        <div class="modal-item" style="grid-column: 1/-1; background:#f9f9f9; padding:10px; border-radius:4px;">
+        </div>
+        
         ${gerarHtmlPDI(colab)}
     `;
 

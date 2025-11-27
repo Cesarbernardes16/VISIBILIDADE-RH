@@ -725,7 +725,7 @@ body {
 .modal-content {
     background-color: #fff;
     width: 90%;
-    max-width: 1200px; /* Largura máxima da janela */
+    max-width: 1500px; /* Largura máxima da janela */
     max-height: 90vh; /* Altura máxima (90% da tela) */
     border-radius: 12px;  /* Cantos arredondados */
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
@@ -808,78 +808,120 @@ body {
     font-weight: 500;
     word-break: break-word;
 }
-/* ======== ESTILOS DO CICLO DE GENTE (PDI) NO MODAL ======== */
+/* ======== ESTILOS DO CICLO DE GENTE (PDI) - VISUAL NOVO ======== */
 
 .pdi-section {
     margin-top: 30px;
     border-top: 2px solid #eee;
     padding-top: 20px;
-    grid-column: 1 / -1; /* Faz ocupar a largura total do grid */
+    grid-column: 1 / -1; 
 }
 
 .pdi-section h3 {
     color: #192A56;
-    margin: 0 0 15px 0;
-    border-left: 5px solid #4a69e2;
-    padding-left: 10px;
-    font-size: 1.3em;
+    margin: 0 0 20px 0;
+    font-size: 1.4em;
+    border-left: 6px solid #192A56;
+    padding-left: 15px;
 }
 
 .pdi-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 25px; /* Mais espaço entre os cards */
 }
 
-/* Card de cada competência */
+/* Card da Competência */
 .pdi-card {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-left: 4px solid #ccc; /* Cor padrão (pendente) */
-    border-radius: 6px;
-    padding: 15px;
-    transition: box-shadow 0.2s;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow: hidden; /* Garante que o cabeçalho não saia do card */
+    display: flex;
+    flex-direction: column;
 }
 
-.pdi-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-/* Título da Competência */
+/* --- TÍTULO COM MAIS DESTAQUE --- */
 .pdi-card h4 {
-    margin: 0 0 12px 0;
-    color: #333;
+    margin: 0;
+    background-color: #f1f3f5; /* Fundo cinza suave */
+    color: #000000;           /* Azul escuro */
+    padding: 15px 20px;
     font-size: 1.1em;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 8px;
-}
-
-/* Grid interno dos detalhes da ação */
-.pdi-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-}
-
-.pdi-item strong {
-    display: block;
-    font-size: 0.75em;
-    color: #666;
+    font-weight: 800;         /* Negrito forte */
     text-transform: uppercase;
-    margin-bottom: 3px;
+    border-bottom: 2px solid #e9ecef;
     letter-spacing: 0.5px;
 }
 
+/* --- CONTEÚDO EM LINHA COM ROLAGEM (SCROLL) --- */
+.pdi-details {
+    display: flex;            /* Força ficar lado a lado */
+    gap: 0;                   /* Remove gap para usar bordas */
+    overflow-x: auto;         /* Cria barra de rolagem se precisar */
+    padding: 0;
+    white-space: nowrap;      /* Impede quebra de texto forçada */
+    
+    /* Estilização da barra de rolagem (Chrome/Safari/Edge) */
+    scrollbar-width: thin;
+    scrollbar-color: #ccc #f9f9f9;
+}
+
+/* Design da barra de rolagem */
+.pdi-details::-webkit-scrollbar {
+    height: 8px;
+}
+.pdi-details::-webkit-scrollbar-track {
+    background: #f9f9f9;
+}
+.pdi-details::-webkit-scrollbar-thumb {
+    background-color: #bbb;
+    border-radius: 4px;
+}
+
+/* Cada coluna de informação */
+.pdi-item {
+    flex: 0 0 auto;           /* Não deixa encolher */
+    width: 200px;             /* Largura fixa boa para leitura */
+    min-width: 180px;
+    padding: 15px 20px;
+    border-right: 1px solid #eee; /* Linha separando colunas */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.pdi-item:last-child {
+    border-right: none;
+}
+
+/* Título da coluna (Situação, Ação, etc) - COM MAIS DESTAQUE */
+.pdi-item strong {
+    display: block;
+    font-size: 0.85em;        /* Aumentado (era 0.7em) */
+    color: #020202;           /* Azul Escuro do tema (era cinza) */
+    text-transform: uppercase;
+    margin-bottom: 12px;      /* Mais espaço para o texto de baixo */
+    font-weight: 800;         /* Negrito Extra */
+    letter-spacing: 0.5px;    /* Leve espaçamento entre letras */
+    
+    /* Linha decorativa abaixo do título */
+    border-bottom: 2px solid #e9ecef; 
+    padding-bottom: 5px;
+}
+
+/* Valor da coluna */
 .pdi-item span {
     font-size: 0.95em;
     color: #333;
     font-weight: 500;
+    white-space: normal; /* Permite que o texto dentro da coluna quebre linha, mas a coluna não */
+    line-height: 1.4;
 }
 
-/* Cores de status */
-.pdi-card[data-status="CONCLUIDO"],
-.pdi-card[data-status="REALIZADO"] { border-left-color: #28a745; }
-
-.pdi-card[data-status="ATRASADO"] { border-left-color: #dc3545; }
-
-.pdi-card[data-status="EM ANDAMENTO"] { border-left-color: #007bff; }
+/* Bordas coloridas baseadas no status (opcional, mantendo visual clean) */
+.pdi-card[data-status="CONCLUIDO"] h4 { border-left: 5px solid #28a745; }
+.pdi-card[data-status="REALIZADO"] h4 { border-left: 5px solid #28a745; }
+.pdi-card[data-status="ATRASADO"] h4 { border-left: 5px solid #dc3545; }
+.pdi-card[data-status="EM ANDAMENTO"] h4 { border-left: 5px solid #007bff; }
