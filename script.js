@@ -6,36 +6,62 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ======== FUNÇÃO DE CORREÇÃO ATUALIZADA (LIMPA OS  DA IMAGEM) ========
+// ======== FUNÇÃO DE CORREÇÃO ATUALIZADA (VERSÃO FINAL) ========
 function corrigirStringQuebrada(texto) {
     if (typeof texto !== 'string' || !texto) return texto;
 
-    // Se tiver o caractere '' ou estiver quebrado
-    if (texto.includes('') || texto.includes('')) { 
-        // Correções Genéricas (baseadas na sua imagem)
-        if (texto.includes('PRIORIZA')) return texto.replace(/PRIORIZAO/g, 'PRIORIZAÇÃO').replace(/PRIORIZA..O/g, 'PRIORIZAÇÃO');
-        if (texto.includes('GEST') && texto.includes('O')) return texto.replace(/GEST..O/g, 'GESTÃO').replace(/GESTO/g, 'GESTÃO');
-        if (texto.includes('AO')) return texto.replace(/AO/g, 'AÇÃO');
-        if (texto.includes('AES')) return texto.replace(/AES/g, 'AÇÕES');
-        if (texto.includes('COMUNICA')) return texto.replace(/COMUNICA..O/g, 'COMUNICAÇÃO');
-        if (texto.includes('360')) return texto.replace(/360/g, '360°').replace(/360../g, '360°');
-        if (texto.includes('S')) return texto.replace(/S/g, 'ÀS'); // 7h ÀS 8h
-        
-        // Correções de Cargos Antigos
-        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) return 'DISTRIBUIÇÃO URBANA';
-        if (texto.includes('Ajudante') && texto.includes('Distribui')) return 'Ajudante Distribuição';
-        if (texto.includes('Analista') && texto.includes('Opera')) return 'Analista Operações';
-        if (texto.includes('Representante') && texto.includes('Neg')) {
-            if (texto.includes(' II')) return 'Representante de Negócios II';
-            if (texto.includes(' I')) return 'Representante de Negócios I';
-            return 'Representante de Negócios'; 
-        }
-        if (texto.includes('3') && texto.includes('TURNO')) return '3º TURNO';
-        if (texto.includes('Armaz') && texto.includes('m')) return (texto.includes('Ajudante')) ? 'Ajudante De Armazém' : 'Armazém';
-        if (texto.includes('Caminh') && texto.includes('o')) return (texto.includes('Motorista')) ? 'Motorista Caminhão' : 'Caminhão';
-        
-        return texto;
+    // 1. Correção do BUG do "S" -> "ÀS" (Apenas S isolado)
+    if (texto.includes(' S ')) {
+        texto = texto.replace(/ S /g, ' ÀS ');
     }
+
+    // Se tiver caracteres de erro () ou outros padrões quebrados
+    // O regex /[\?]/ busca especificamente o losango com interrogação ou interrogação simples
+    if (texto.match(/[\?]/) || texto.includes('')) { 
+
+        // NOVAS CORREÇÕES (Baseadas nos seus exemplos)
+        // O ponto (.) no regex funciona como coringa para pegar o  ou qualquer erro
+
+        // COMPETÊNCIAS / SEGURANÇA
+        if (texto.match(/COMPET.NCIAS/)) texto = texto.replace(/COMPET.NCIAS/g, 'COMPETÊNCIAS');
+        if (texto.match(/SEGURAN.A/)) texto = texto.replace(/SEGURAN.A/g, 'SEGURANÇA');
+        
+        // CONFIANÇA / NÃO
+        if (texto.match(/CONFIAN.A/)) texto = texto.replace(/CONFIAN.A/g, 'CONFIANÇA');
+        if (texto.match(/ N.O /)) texto = texto.replace(/ N.O /g, ' NÃO '); // Com espaços para evitar palavras como "DOMINÓ"
+        if (texto.match(/^N.O /)) texto = texto.replace(/^N.O /g, 'NÃO ');  // Começo de frase
+        if (texto.match(/ N.O$/)) texto = texto.replace(/ N.O$/g, ' NÃO');  // Fim de frase
+        
+        // ANÁLISE / DECISÕES
+        if (texto.match(/AN.LISE/)) texto = texto.replace(/AN.LISE/g, 'ANÁLISE');
+        if (texto.match(/DECIS.ES/)) texto = texto.replace(/DECIS.ES/g, 'DECISÕES');
+
+        // NUMERAÇÃO
+        if (texto.match(/3./)) texto = texto.replace(/3./g, '3°');
+        if (texto.match(/2./)) texto = texto.replace(/2./g, '2°');
+        if (texto.match(/1./)) texto = texto.replace(/1./g, '1°');
+
+        // Correções Anteriores (Mantidas e Reforçadas)
+        if (texto.match(/A..O/)) texto = texto.replace(/A..O/g, 'AÇÃO'); 
+        if (texto.match(/A[^Z]O/)) texto = texto.replace(/A[^Z]O/g, 'AÇÃO');
+
+        
+        if (texto.match(/GEST..O/)) texto = texto.replace(/GEST..O/g, 'GESTÃO ');
+        if (texto.match(/GEST.O/)) texto = texto.replace(/GEST.O/g, 'GESTÃO ');
+
+        if (texto.match(/PRIORIZA..O/)) texto = texto.replace(/PRIORIZA..O/g, 'PRIORIZAÇÃO');
+        if (texto.match(/EMP.TICA/)) texto = texto.replace(/EMP.TICA/g, 'EMPÁTICA ');
+        if (texto.match(/REUNI.ES/)) texto = texto.replace(/REUNI.ES/g, 'REUNIÕES ');
+        if (texto.match(/EMO..ES /)) texto = texto.replace(/EMO..ES /g, 'EMOÇÕES ');
+        if (texto.match(/COMUNICA..O/)) texto = texto.replace(/COMUNICA..O/g, 'COMUNICAÇÃO');
+        if (texto.match(/Caminh.o/)) texto = texto.replace(/Caminh.o/g, 'Caminhão');
+        if (texto.match(/Distribui..o/)) texto = texto.replace(/Distribui..o/g, 'Distribuição');
+        
+        // Correções de Cargos
+        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) return 'DISTRIBUIÇÃO URBANA';
+        if (texto.includes('Analista') && texto.includes('Opera')) return 'Analista Operações';
+    }
+    
     return texto;
 }
 
