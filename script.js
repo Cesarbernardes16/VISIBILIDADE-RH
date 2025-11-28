@@ -268,22 +268,43 @@ function buildQuery() {
 async function carregarColaboradores() {
     currentPage = 0; 
     if (!loadingIndicator || !dashboardContainer || !loadMoreButton) return;
+    
     loadingIndicator.style.display = 'block';
     dashboardContainer.innerHTML = ''; 
     listaColaboradoresGlobal = []; 
     loadMoreButton.style.display = 'none'; 
     
+    // Debug: Avisar que começou
+    console.log("Iniciando busca de colaboradores...");
+
     const { data, error } = await buildQuery().range(0, ITENS_POR_PAGINA - 1);
     
+    // Debug: Ver o que voltou do Supabase
+    console.log("Dados retornados:", data);
+    console.log("Erro retornado:", error);
+
     loadingIndicator.style.display = 'none';
-    if (error || !data || data.length === 0) {
-        dashboardContainer.innerHTML = error ? "<p>Erro ao carregar.</p>" : "<p>Nenhum colaborador encontrado.</p>";
+    
+    if (error) {
+        dashboardContainer.innerHTML = `<p style="color:red">Erro: ${error.message}</p>`;
+        console.error("Erro detalhado:", error);
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        dashboardContainer.innerHTML = "<p>Nenhum colaborador encontrado (Lista vazia retornada do banco).</p>";
         return;
     }
     
     data.forEach(colaborador => {
         const index = listaColaboradoresGlobal.push(colaborador) - 1;
-        dashboardContainer.innerHTML += criarCardColaborador(colaborador, index);
+        // Debug: ver se o card está sendo gerado
+        try {
+            const htmlCard = criarCardColaborador(colaborador, index);
+            dashboardContainer.innerHTML += htmlCard;
+        } catch (e) {
+            console.error("Erro ao criar card para:", colaborador.NOME, e);
+        }
     });
     
     if (data.length === ITENS_POR_PAGINA) loadMoreButton.style.display = 'block';
@@ -317,7 +338,11 @@ function criarCardColaborador(colaborador, index) {
     const status = colaborador.SITUACAO || 'Indefinido'; 
     const nome = corrigirStringQuebrada(colaborador.NOME) || '';
     const cpf = formatarCPF(colaborador.CPF); 
-    const funcao = corrigirStringQuebrada(colaborador['CARGO ATUAL']) || ''; 
+    
+    // CORREÇÃO: Usando CARGO_ATUAL (sem espaço) para evitar erro 400
+    // O usuário deve renomear a coluna no Supabase para CARGO_ATUAL
+    const funcao = corrigirStringQuebrada(colaborador.CARGO_ATUAL || colaborador['CARGO ATUAL']) || ''; 
+
     const area = corrigirStringQuebrada(colaborador.ATIVIDADE) || '';
     const tempoEmpresa = formatarTempoDeEmpresa(colaborador['TEMPO DE EMPRESA']); 
     const escolaridade = corrigirStringQuebrada(colaborador.ESCOLARIDADE) || ''; 
@@ -433,7 +458,11 @@ async function handleMetaSubmit(e) {
 
 async function fetchProcessedData() {
     const { data: metas } = await supabaseClient.from(NOME_TABELA_METAS).select('*');
-    const { data: qlp } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, SITUACAO, PCD, "CARGO ATUAL"');
+    
+    // CORREÇÃO: Removidas aspas e espaço de 'CARGO ATUAL' -> CARGO_ATUAL
+    // Isso evita o erro 400.
+    const { data: qlp } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, SITUACAO, PCD, CARGO_ATUAL');
+
     if (!qlp) return { error: true };
     const metasMap = (metas || []).reduce((acc, m) => ({...acc, [m.area]: m}), {});
     const areas = [...new Set([...qlp.map(d => d.ATIVIDADE).filter(Boolean), ...Object.keys(metasMap)])].sort();
@@ -444,7 +473,10 @@ async function fetchProcessedData() {
         if (realMap[c.ATIVIDADE]) {
             realMap[c.ATIVIDADE].qlp++;
             if (c.PCD === 'SIM') realMap[c.ATIVIDADE].pcd++;
-            if ((c['CARGO ATUAL']||'').includes('JOVEM APRENDIZ')) realMap[c.ATIVIDADE].jovem++;
+            
+            // CORREÇÃO: Usando CARGO_ATUAL ou fallback
+            const cargo = c.CARGO_ATUAL || c['CARGO ATUAL'] || '';
+            if (cargo.includes('JOVEM APRENDIZ')) realMap[c.ATIVIDADE].jovem++;
         }
     });
     return { areas, metasMap, realMap, totalAtivos: ativos.length, error: null };
@@ -598,11 +630,14 @@ function abrirModalDetalhes(index) {
         </div>
     `;
 
+    // CORREÇÃO: Usando CARGO_ATUAL no modal
+    const funcao = corrigirStringQuebrada(colab.CARGO_ATUAL || colab['CARGO ATUAL']);
+
     // Dados Pessoais + PDI
     grid.innerHTML = `
         <div class="modal-item"><strong>CPF</strong> <span>${formatarCPF(colab.CPF)}</span></div>
         <div class="modal-item"><strong>Matrícula</strong> <span>${colab.MATRICULA || '-'}</span></div>
-        <div class="modal-item"><strong>Função</strong> <span>${corrigirStringQuebrada(colab['CARGO ATUAL'])}</span></div>
+        <div class="modal-item"><strong>Função</strong> <span>${funcao}</span></div>
         <div class="modal-item"><strong>Área</strong> <span>${corrigirStringQuebrada(colab.ATIVIDADE)}</span></div>
         <div class="modal-item"><strong>Salário</strong> <span>${formatarSalario(colab.SALARIO)}</span></div>
         <div class="modal-item"><strong>Tempo de Casa</strong> <span>${formatarTempoDeEmpresa(colab['TEMPO DE EMPRESA'])}</span></div>

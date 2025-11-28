@@ -6,27 +6,63 @@ const SUPABASE_URL = SUPABASE_CONFIG.url;
 const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ======== FUNÇÃO DE CORREÇÃO (VERSÃO 9 - GATILHO CORRIGIDO + NOVAS REGRAS) ========
+// ======== FUNÇÃO DE CORREÇÃO ATUALIZADA (VERSÃO FINAL) ========
 function corrigirStringQuebrada(texto) {
-    if (typeof texto !== 'string' || !texto) {
-        return texto;
+    if (typeof texto !== 'string' || !texto) return texto;
+
+    // 1. Correção do BUG do "S" -> "ÀS" (Apenas S isolado)
+    if (texto.includes(' S ')) {
+        texto = texto.replace(/ S /g, ' ÀS ');
     }
 
-    if (texto.includes('')) { 
-        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) return 'DISTRIBUIÇÃO URBANA';
-        if (texto.includes('Ajudante') && texto.includes('Distribui')) return 'Ajudante Distribuição';
-        if (texto.includes('Analista') && texto.includes('Opera')) return 'Analista Operações';
-        if (texto.includes('Representante') && texto.includes('Neg')) {
-            if (texto.includes(' II')) return 'Representante de Negócios II';
-            if (texto.includes(' I')) return 'Representante de Negócios I';
-            return 'Representante de Negócios'; 
-        }
-        if (texto.includes('3') && texto.includes('TURNO')) return '3º TURNO';
-        if (texto.includes('Armaz') && texto.includes('m')) return (texto.includes('Ajudante')) ? 'Ajudante De Armazém' : 'Armazém';
-        if (texto.includes('Caminh') && texto.includes('o')) return (texto.includes('Motorista')) ? 'Motorista Caminhão' : 'Caminhão';
+    // Se tiver caracteres de erro () ou outros padrões quebrados
+    // O regex /[\?]/ busca especificamente o losango com interrogação ou interrogação simples
+    if (texto.match(/[\?]/)) {  
+
+        // NOVAS CORREÇÕES (Baseadas nos seus exemplos)
+        // O ponto (.) no regex funciona como coringa para pegar o  ou qualquer erro
+
+        // COMPETÊNCIAS / SEGURANÇA
+        if (texto.match(/COMPET.NCIAS/)) texto = texto.replace(/COMPET.NCIAS/g, 'COMPETÊNCIAS');
+        if (texto.match(/SEGURAN.A/)) texto = texto.replace(/SEGURAN.A/g, 'SEGURANÇA');
         
-        return texto;
+        // CONFIANÇA / NÃO
+        if (texto.match(/CONFIAN.A/)) texto = texto.replace(/CONFIAN.A/g, 'CONFIANÇA');
+        if (texto.match(/ N.O /)) texto = texto.replace(/ N.O /g, ' NÃO '); // Com espaços para evitar palavras como "DOMINÓ"
+        if (texto.match(/^N.O /)) texto = texto.replace(/^N.O /g, 'NÃO ');  // Começo de frase
+        if (texto.match(/ N.O$/)) texto = texto.replace(/ N.O$/g, ' NÃO');  // Fim de frase
+        
+        // ANÁLISE / DECISÕES
+        if (texto.match(/AN.LISE/)) texto = texto.replace(/AN.LISE/g, 'ANÁLISE');
+        if (texto.match(/ANAL.TICA/)) texto = texto.replace(/ANAL.TICA/g, 'ANALÍTICA');
+        if (texto.match(/DECIS.ES/)) texto = texto.replace(/DECIS.ES/g, 'DECISÕES');
+
+        // NUMERAÇÃO
+        if (texto.match(/3./)) texto = texto.replace(/3./g, '3°');
+        if (texto.match(/2./)) texto = texto.replace(/2./g, '2°');
+        if (texto.match(/1./)) texto = texto.replace(/1./g, '1°');
+
+        // Correções Anteriores (Mantidas e Reforçadas)
+        if (texto.match(/A..O/)) texto = texto.replace(/A..O/g, 'AÇÃO '); 
+        if (texto.match(/A[^Z]O/)) texto = texto.replace(/A[^Z]O/g, 'AÇÃO ');
+
+        
+        if (texto.match(/GEST..O/)) texto = texto.replace(/GEST..O/g, 'GESTÃO ');
+        if (texto.match(/GEST.O/)) texto = texto.replace(/GEST.O/g, 'GESTÃO ');
+
+        if (texto.match(/PRIORIZA..O/)) texto = texto.replace(/PRIORIZA..O/g, 'PRIORIZAÇÃO');
+        if (texto.match(/EMP.TICA/)) texto = texto.replace(/EMP.TICA/g, 'EMPÁTICA ');
+        if (texto.match(/REUNI.ES/)) texto = texto.replace(/REUNI.ES/g, 'REUNIÕES ');
+        if (texto.match(/EMO..ES /)) texto = texto.replace(/EMO..ES /g, 'EMOÇÕES ');
+        if (texto.match(/COMUNICA..O/)) texto = texto.replace(/COMUNICA..O/g, 'COMUNICAÇÃO');
+        if (texto.match(/Caminh.o/)) texto = texto.replace(/Caminh.o/g, 'Caminhão');
+        if (texto.match(/Distribui..o/)) texto = texto.replace(/Distribui..o/g, 'Distribuição');
+        
+        // Correções de Cargos
+        if (texto.includes('DISTRIBUI') && texto.includes('URBANA')) return 'DISTRIBUIÇÃO URBANA';
+        if (texto.includes('Analista') && texto.includes('Opera')) return 'Analista Operações';
     }
+    
     return texto;
 }
 
@@ -312,6 +348,7 @@ function criarCardColaborador(colaborador, index) {
 
     const pcdClass = (pcd.toUpperCase() === 'SIM') ? 'pcd-sim' : 'pcd-nao';
     
+    // RETORNA CARD COMPLETO
     return `
         <div class="employee-card ${statusClass}">
             <div class="card-header">
@@ -353,7 +390,7 @@ function criarCardColaborador(colaborador, index) {
     `;
 }
 
-// 6 a 10. Funções Auxiliares (Filtros, Metas, Gráficos) - Mantidas Simplificadas
+// 6 a 10. Funções Auxiliares (Filtros, Metas, Gráficos)
 async function popularFiltrosDinamicos() {
     if (!filterArea) return;
     const { data } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, LIDER, CLASSIFICACAO');
@@ -397,14 +434,11 @@ async function handleMetaSubmit(e) {
 async function fetchProcessedData() {
     const { data: metas } = await supabaseClient.from(NOME_TABELA_METAS).select('*');
     const { data: qlp } = await supabaseClient.from(NOME_TABELA_QLP).select('ATIVIDADE, SITUACAO, PCD, "CARGO ATUAL"');
-    
     if (!qlp) return { error: true };
-    
     const metasMap = (metas || []).reduce((acc, m) => ({...acc, [m.area]: m}), {});
     const areas = [...new Set([...qlp.map(d => d.ATIVIDADE).filter(Boolean), ...Object.keys(metasMap)])].sort();
     const realMap = {};
     const ativos = qlp.filter(c => c.SITUACAO && c.SITUACAO.toUpperCase() === 'ATIVO');
-
     areas.forEach(a => realMap[a] = { qlp: 0, pcd: 0, jovem: 0 });
     ativos.forEach(c => {
         if (realMap[c.ATIVIDADE]) {
@@ -421,11 +455,8 @@ async function carregarRelatorioMetas() {
     reportTableBodyQLP.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
     const { areas, metasMap, realMap, totalAtivos, error } = await fetchProcessedData();
     if (error) return;
-
-    // Atualiza Cotas
     document.getElementById('quota-pcd-value').textContent = Math.ceil(totalAtivos * (totalAtivos > 1000 ? 0.05 : 0.02));
     document.getElementById('quota-jovem-value').textContent = Math.ceil(totalAtivos * 0.05);
-
     let htmlQLP = '', htmlPCD = '', htmlJovem = '';
     areas.forEach(a => {
         const m = metasMap[a] || {};
@@ -508,17 +539,17 @@ function gerarHtmlPDI(colab) {
 
     // Loop de 1 a 7 para verificar as colunas
     for (let i = 1; i <= 7; i++) {
-        const competencia = colab[`COMPETENCIA_${i}`];
+        const competencia = corrigirStringQuebrada(colab[`COMPETENCIA_${i}`]); // Corrige nome da competência tb
         
         // Se tiver competência preenchida, cria o card
         if (competencia) {
             encontrouAlgum = true;
             const status = colab[`STATUS_${i}`] || 'Pendente';
-            const situacao = colab[`SITUACAO_DA_ACAO_${i}`] || '-';
-            const acao = colab[`O_QUE_FAZER_${i}`] || '-';
-            const motivo = colab[`POR_QUE_FAZER_${i}`] || '-';
-            const quem = colab[`QUE_PODE_ME_AJUDAR_${i}`] || '-';
-            const como = colab[`COMO_VOU_FAZER_${i}`] || '-';
+            const situacao = corrigirStringQuebrada(colab[`SITUACAO_DA_ACAO_${i}`]) || '-';
+            const acao = corrigirStringQuebrada(colab[`O_QUE_FAZER_${i}`]) || '-';
+            const motivo = corrigirStringQuebrada(colab[`POR_QUE_FAZER_${i}`]) || '-';
+            const quem = corrigirStringQuebrada(colab[`QUE_PODE_ME_AJUDAR_${i}`]) || '-';
+            const como = corrigirStringQuebrada(colab[`COMO_VOU_FAZER_${i}`]) || '-';
             const dataFim = formatarDataExcel(colab[`DATA_DE_TERMINO_${i}`]);
 
             html += `
@@ -558,7 +589,7 @@ function abrirModalDetalhes(index) {
     const nome = corrigirStringQuebrada(colab.NOME);
     const status = colab.SITUACAO || '';
 
-    // Cabeçalho
+    // Cabeçalho do Modal
     header.innerHTML = `
         <img src="avatar-placeholder.png" alt="${nome}">
         <div>
@@ -567,7 +598,7 @@ function abrirModalDetalhes(index) {
         </div>
     `;
 
-    // Dados Pessoais (Grid padrão)
+    // Dados Pessoais + PDI
     grid.innerHTML = `
         <div class="modal-item"><strong>CPF</strong> <span>${formatarCPF(colab.CPF)}</span></div>
         <div class="modal-item"><strong>Matrícula</strong> <span>${colab.MATRICULA || '-'}</span></div>
@@ -581,9 +612,7 @@ function abrirModalDetalhes(index) {
         <div class="modal-item"><strong>Turno</strong> <span>${corrigirStringQuebrada(colab.TURNO)}</span></div>
         <div class="modal-item"><strong>CLASSIFICAÇÃO CICLO DE GENTE</strong> <span>${colab.CLASSIFICACAO || '-'}</span></div>
         <div class="modal-item"><strong>DATA ULTIMA PROMOÇÃO</strong> <span>${colab.dataPromocao || '-'}</span></div>
-        <div class="modal-item" style="grid-column: 1/-1; background:#f9f9f9; padding:10px; border-radius:4px;">
-        </div>
-        
+        <div class="modal-item" style="grid-column: 1/-1; background:#f9f9f9; padding:10px; border-radius:4px;">    
         ${gerarHtmlPDI(colab)}
     `;
 
