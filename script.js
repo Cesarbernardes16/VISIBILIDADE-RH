@@ -17,7 +17,7 @@ function corrigirStringQuebrada(texto) {
 
     // Se tiver caracteres de erro () ou outros padrões quebrados
     // O regex /[\?]/ busca especificamente o losango com interrogação ou interrogação simples
-    if (texto.match(/[\?]/) || texto.includes('')) { 
+    if (texto.match(/[\?]/)) {  
 
         // NOVAS CORREÇÕES (Baseadas nos seus exemplos)
         // O ponto (.) no regex funciona como coringa para pegar o  ou qualquer erro
