@@ -34,6 +34,7 @@ function corrigirStringQuebrada(texto) {
         
         // ANÁLISE / DECISÕES
         if (texto.match(/AN.LISE/)) texto = texto.replace(/AN.LISE/g, 'ANÁLISE');
+        if (texto.match(/ANAL.TICA/)) texto = texto.replace(/ANAL.TICA/g, 'ANALÍTICA');
         if (texto.match(/DECIS.ES/)) texto = texto.replace(/DECIS.ES/g, 'DECISÕES');
 
         // NUMERAÇÃO
@@ -42,8 +43,8 @@ function corrigirStringQuebrada(texto) {
         if (texto.match(/1./)) texto = texto.replace(/1./g, '1°');
 
         // Correções Anteriores (Mantidas e Reforçadas)
-        if (texto.match(/A..O/)) texto = texto.replace(/A..O/g, 'AÇÃO'); 
-        if (texto.match(/A[^Z]O/)) texto = texto.replace(/A[^Z]O/g, 'AÇÃO');
+        if (texto.match(/A..O/)) texto = texto.replace(/A..O/g, 'AÇÃO '); 
+        if (texto.match(/A[^Z]O/)) texto = texto.replace(/A[^Z]O/g, 'AÇÃO ');
 
         
         if (texto.match(/GEST..O/)) texto = texto.replace(/GEST..O/g, 'GESTÃO ');
